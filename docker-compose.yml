@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  discovery:
+    build:
+      context: ./discovery-server
+      dockerfile: Dockerfile
+    container_name: discovery
+    ports:
+      - "8761:8761"
+    networks:
+      - ms-net
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    depends_on:
+      - discovery
+    environment:
+      - EUREKA_URI=http://discovery:8761/eureka
+    ports:
+      - "8080:8080"
+    networks:
+      - ms-net
+
+  vendas-service:
+    build:
+      context: ./vendas-service
+      dockerfile: Dockerfile
+    container_name: vendas-service
+    depends_on:
+      - discovery
+    environment:
+      - EUREKA_URI=http://discovery:8761/eureka
+    networks:
+      - ms-net
+
+  estoque-service:
+    build:
+      context: ./estoque-service
+      dockerfile: Dockerfile
+    container_name: estoque-service
+    depends_on:
+      - discovery
+    environment:
+      - EUREKA_URI=http://discovery:8761/eureka
+    networks:
+      - ms-net
+
+  pagamento-service:
+    build:
+      context: ./pagamento-service
+      dockerfile: Dockerfile
+    container_name: pagamento-service
+    depends_on:
+      - discovery
+    environment:
+      - EUREKA_URI=http://discovery:8761/eureka
+    networks:
+      - ms-net
+
+networks:
+  ms-net:
+    driver: bridge

@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: vendas-service
+          uri: lb://vendas-service
+          predicates:
+            - Path=/vendas/**
+        - id: estoque-service
+          uri: lb://estoque-service
+          predicates:
+            - Path=/estoque/**
+        - id: pagamento-service
+          uri: lb://pagamento-service
+          predicates:
+            - Path=/pagamento/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+server:
+  port: 8080
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
