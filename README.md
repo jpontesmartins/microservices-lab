@@ -91,6 +91,8 @@ Body:
 
 O `vendas-service` usa circuit breaker em chamadas de estoque e pagamento (para estudar falhas, timeouts e recuperacao).
 
+// TODO ⬅️
+
 - Configure falhas/latencia no `pagamento-service` via `pagamento.failRate` e `pagamento.delayMs` (application.yml).
 - Observe metricas em `GET /actuator/metrics` e `GET /actuator/prometheus` (em cada servico).
 
