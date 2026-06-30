@@ -11,15 +11,23 @@ eureka:
       defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
   instance:
     prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics,prometheus
+  info:
+    env:
+      enabled: true
   tracing:
     sampling:
       probability: 1.0
+
+info:
+  app:
+    name: estoque service
 
 logging:
   pattern:

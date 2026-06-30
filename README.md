@@ -127,6 +127,23 @@ No `docker-compose.yml`, cada container recebe:
    - `GET http://localhost:8080/estoque/itens`
    - `GET http://localhost:8080/pagamento/status`
 
+### DEV (multiplas instancias: Load Balancer)
+
+Para simular mais de 1 instancia localmente (sem conflito de porta), use o profile `dev` no `estoque-service` e no `pagamento-service` (ele usa `server.port=0`).
+
+Em dois terminais diferentes, no mesmo servico:
+
+- `pagamento-service`: execute duas vezes com `SPRING_PROFILES_ACTIVE=dev`
+- `estoque-service`: execute duas vezes com `SPRING_PROFILES_ACTIVE=dev`
+
+Comando para rodar com o profile `dev`:  
+`mvn spring-boot:run "-Dspring-boot.run.profiles=dev"`
+
+Depois chame repetidamente:
+
+- `http://localhost:8080/whoami/pagamento`
+- `http://localhost:8080/whoami/estoque`
+
 ### TST (subir tudo de uma vez)
 
 Na raiz do repositorio:
@@ -143,3 +160,24 @@ Gateway:
 - `http://localhost:8080/vendas/pedidos`
 - `http://localhost:8080/estoque/itens`
 - `http://localhost:8080/pagamento/status`
+
+## Load Balancing (Spring Cloud LoadBalancer)
+
+Este ecosistema usa Spring Cloud LoadBalancer para distribuir chamadas quando houver mais de uma instancia do mesmo servico registrada no Eureka:
+
+- Gateway: rotas `lb://...` passam pelo LoadBalancer.
+- Vendas: chamadas Feign para `estoque-service` e `pagamento-service` passam pelo LoadBalancer.
+
+### Como ver funcionando (Docker)
+
+Suba com mais de uma instancia de `pagamento-service` e `estoque-service`:
+
+- `docker compose up --build --scale pagamento-service=2 --scale estoque-service=2`
+
+Teste repetidamente pelos endpoints de "whoami" expostos pelo gateway:
+
+- `http://localhost:8080/whoami/pagamento`
+- `http://localhost:8080/whoami/estoque`
+- `http://localhost:8080/whoami/vendas`
+
+Em chamadas sequenciais, o `instanceId` deve alternar entre instancias (ex.: round-robin).

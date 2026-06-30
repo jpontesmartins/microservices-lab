@@ -20,15 +20,40 @@ spring:
           uri: lb://pagamento-service
           predicates:
             - Path=/pagamento/**
+        - id: whoami-vendas
+          uri: lb://vendas-service
+          predicates:
+            - Path=/whoami/vendas
+          filters:
+            - SetPath=/vendas/whoami
+        - id: whoami-estoque
+          uri: lb://estoque-service
+          predicates:
+            - Path=/whoami/estoque
+          filters:
+            - SetPath=/estoque/whoami
+        - id: whoami-pagamento
+          uri: lb://pagamento-service
+          predicates:
+            - Path=/whoami/pagamento
+          filters:
+            - SetPath=/pagamento/whoami
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics,prometheus
+  info:
+    env:
+      enabled: true
   tracing:
     sampling:
       probability: 1.0
+
+info:
+  app:
+    name: api gateway
 
 logging:
   pattern:
@@ -41,3 +66,5 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+  instance:
+    instance-id: ${spring.application.name}:${random.value}

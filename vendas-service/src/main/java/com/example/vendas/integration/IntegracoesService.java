@@ -30,6 +30,7 @@ public class IntegracoesService {
     @SuppressWarnings("unused")
     public ReservaResponse reservaFallback(String pedidoId, String sku, int quantidade, Throwable t) {
         log.warn("Fallback de estoque acionado (pedidoId={}, sku={}, quantidade={}): {}", pedidoId, sku, quantidade, t.toString());
+        // TODO: acho que o ideal é substituir o null por algo que faça sentido, ver o que é mais indicado fazer nos Fallback dos Circuit Breakers
         return null;
     }
 

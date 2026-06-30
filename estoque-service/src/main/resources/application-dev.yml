@@ -1,0 +1,8 @@
+server:
+  # Em DEV, porta aleatoria para permitir subir multiplas instancias sem conflito.
+  port: 0
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}:${random.value}
+
