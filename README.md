@@ -94,7 +94,8 @@ O `vendas-service` usa circuit breaker em chamadas de estoque e pagamento (para 
 // TODO ⬅️
 
 - Configure falhas/latencia no `pagamento-service` via `pagamento.failRate` e `pagamento.delayMs` (application.yml).
-- Observe metricas em `GET /actuator/metrics` e `GET /actuator/prometheus` (em cada servico).
+
+- [X] Observe metricas em `GET /actuator/metrics` e `GET /actuator/prometheus` (em cada servico).
 
 ## Observabilidade (Actuator)
 
@@ -102,6 +103,7 @@ Os servicos expõem endpoints Actuator basicos para facilitar diagnostico e inte
 
 - `GET /actuator/health`
 - `GET /actuator/info`
+- `GET /actuator/prometheus`
 
 No gateway, o Actuator tambem esta presente e os endpoints expostos incluem `health` e `info`.
 
@@ -129,6 +131,10 @@ No `docker-compose.yml`, cada container recebe:
 
 ### DEV (multiplas instancias: Load Balancer)
 
+> ❗ Não consegui ainda configurar o PushGateway. Sem pushgateway, sem envio das métricas das instâncias que não tem porta fixa.
+> Os únicos serviços com porta fixa são o `api-gateway` e o `vendas-service`.
+> Ambos estão sendo monitorados.
+
 Para simular mais de 1 instancia localmente (sem conflito de porta), use o profile `dev` no `estoque-service` e no `pagamento-service` (ele usa `server.port=0`).
 
 Em dois terminais diferentes, no mesmo servico:
@@ -139,7 +145,7 @@ Em dois terminais diferentes, no mesmo servico:
 Comando para rodar com o profile `dev`:  
 `mvn spring-boot:run "-Dspring-boot.run.profiles=dev"`
 
-Depois chame repetidamente:
+Para visualziar o balanceamento de carga, chame repetidamente:
 
 - `http://localhost:8080/whoami/pagamento`
 - `http://localhost:8080/whoami/estoque`
@@ -170,6 +176,8 @@ Este ecosistema usa Spring Cloud LoadBalancer para distribuir chamadas quando ho
 
 ### Como ver funcionando (Docker)
 
+> ❓Descobrir sobre as portas ao subir com o `--scale pagamento-service=2`.
+ 
 Suba com mais de uma instancia de `pagamento-service` e `estoque-service`:
 
 - `docker compose up --build --scale pagamento-service=2 --scale estoque-service=2`
