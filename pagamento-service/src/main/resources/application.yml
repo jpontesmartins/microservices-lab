@@ -1,6 +1,8 @@
 spring:
   application:
     name: pagamento-service
+  zipkin:
+    baseUrl: http://localhost:9411
 
 server:
   port: 8083

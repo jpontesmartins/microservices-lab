@@ -8,6 +8,8 @@ spring:
           default:
             connectTimeout: 1000
             readTimeout: 2000
+  zipkin:
+    baseUrl: http://localhost:9411
 
 server:
   port: 8081

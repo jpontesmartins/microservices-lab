@@ -38,6 +38,8 @@ spring:
             - Path=/whoami/pagamento
           filters:
             - SetPath=/pagamento/whoami
+  zipkin:
+    baseUrl: http://localhost:9411
 
 management:
   endpoints:
