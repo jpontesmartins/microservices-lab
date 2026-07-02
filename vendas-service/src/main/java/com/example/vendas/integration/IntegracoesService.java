@@ -24,7 +24,22 @@ public class IntegracoesService {
 
     @CircuitBreaker(name = "estoque", fallbackMethod = "reservaFallback")
     public ReservaResponse reservarEstoque(String pedidoId, String sku, int quantidade) {
-        return estoqueClient.reservar(new ReservaRequest(pedidoId, sku, quantidade));
+        log.info("Chamando estoque-service para reserva (pedidoId={}, sku={}, quantidade={})", pedidoId, sku, quantidade);
+        ReservaResponse response = null;
+        long started = System.currentTimeMillis();
+        try {
+            response = estoqueClient.reservar(new ReservaRequest(pedidoId, sku, quantidade));
+            log.info("Resposta recebida do estoque-service (pedidoId={}, reservaId={}, status={}, duracaoMs={})",
+                    pedidoId,
+                    response != null ? response.reservaId() : null,
+                    response != null ? response.status() : null,
+                    System.currentTimeMillis() - started);
+            return response;
+        } catch (RuntimeException e) {
+            log.warn("Falha ao reservar estoque (pedidoId={}, sku={}, quantidade={}, duracaoMs={}): {}",
+                    pedidoId, sku, quantidade, System.currentTimeMillis() - started, e.toString());
+            throw e;
+        }
     }
 
     @SuppressWarnings("unused")
@@ -36,7 +51,21 @@ public class IntegracoesService {
 
     @CircuitBreaker(name = "pagamento", fallbackMethod = "pagamentoFallback")
     public PagamentoResponse processarPagamento(String pedidoId, double valor) {
-        return pagamentoClient.pagar(new PagamentoRequest(pedidoId, valor));
+        log.info("Chamando pagamento-service (pedidoId={}, valor={})", pedidoId, valor);
+        long started = System.currentTimeMillis();
+        try {
+            PagamentoResponse response = pagamentoClient.pagar(new PagamentoRequest(pedidoId, valor));
+            log.info("Resposta recebida do pagamento-service (pedidoId={}, transacaoId={}, status={}, duracaoMs={})",
+                    pedidoId,
+                    response != null ? response.transacaoId() : null,
+                    response != null ? response.status() : null,
+                    System.currentTimeMillis() - started);
+            return response;
+        } catch (RuntimeException e) {
+            log.warn("Falha ao processar pagamento (pedidoId={}, valor={}, duracaoMs={}): {}",
+                    pedidoId, valor, System.currentTimeMillis() - started, e.toString());
+            throw e;
+        }
     }
 
     @SuppressWarnings("unused")
@@ -56,4 +85,3 @@ public class IntegracoesService {
         }
     }
 }
-

@@ -107,6 +107,19 @@ Os servicos expõem endpoints Actuator basicos para facilitar diagnostico e inte
 
 No gateway, o Actuator tambem esta presente e os endpoints expostos incluem `health` e `info`.
 
+## Logs E Tracing
+
+Os servicos agora registram logs por etapa do fluxo:
+
+- entrada no gateway, rota escolhida e tempo total da chamada;
+- validacao e criacao do pedido no `vendas-service`;
+- reserva e cancelamento de estoque no `estoque-service`;
+- simulacao, aprovacao e falhas do pagamento no `pagamento-service`.
+
+Os logs usam `traceId` e `spanId` no pattern, entao quando o Zipkin estiver ativo fica mais facil correlacionar uma mesma requisicao entre servicos.
+
+Se o Zipkin estiver rodando fora do host da aplicacao, ajuste `ZIPKIN_BASE_URL`. No `docker-compose.yml` da raiz, ele ja aponta para `http://host.docker.internal:9411` para conversar com o compose de observabilidade.
+
 ## Configuracao do Eureka (DEV vs TST)
 
 Todos os clientes Eureka (gateway + microservicos) usam a URL do registry via:

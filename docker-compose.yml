@@ -20,6 +20,7 @@ services:
       - discovery
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
+      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
     ports:
       - "8080:8080"
     networks:
@@ -34,6 +35,7 @@ services:
       - discovery
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
+      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
     networks:
       - ms-net
 
@@ -46,6 +48,7 @@ services:
       - discovery
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
+      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
     networks:
       - ms-net
 
@@ -58,6 +61,7 @@ services:
       - discovery
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
+      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
     networks:
       - ms-net
 
