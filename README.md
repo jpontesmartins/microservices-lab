@@ -1,6 +1,6 @@
 # Microservices (Eureka + Gateway) - Java 17
 
-Este repositorio contem 5 aplicacoes Spring Boot independentes, para estudo de Service Discovery (Netflix Eureka) e API Gateway (Spring Cloud Gateway).
+Este repositorio contem 6 aplicacoes Spring Boot independentes, para estudo de Service Discovery (Netflix Eureka) e API Gateway (Spring Cloud Gateway).
 
 ## Projetos
 
@@ -25,6 +25,7 @@ Funcao: ponto de entrada unico (reverse proxy) para os microservicos.
   - `POST http://localhost:8080/vendas/pedidos` -> `lb://vendas-service/vendas/pedidos`
   - `GET http://localhost:8080/estoque/itens` -> `lb://estoque-service/estoque/itens`
   - `GET http://localhost:8080/pagamento/status` -> `lb://pagamento-service/pagamento/status`
+  - `POST http://localhost:8080/frete/calcular` -> `lb://frete-service/frete/calcular`
 
 ### `vendas-service`
 
@@ -34,8 +35,9 @@ Funcao: microservico A (exemplo de "vendas") e orquestrador do fluxo de pedido n
 - Registra-se no Eureka com o nome `vendas-service` (definido em `spring.application.name`).
 - Implementa um fluxo de negocio simples (Processamento de Pedido):
   - Reserva estoque no `estoque-service`.
-  - Se a reserva OK, processa pagamento no `pagamento-service`.
-  - Se o pagamento falhar, tenta compensar devolvendo o estoque (best-effort).
+  - Calcula frete no `frete-service`.
+  - Se estoque e frete OK, processa pagamento no `pagamento-service` (valor = produto + frete).
+  - Se o pagamento falhar, tenta compensar devolvendo o estoque e cancelando o frete (best-effort).
 - Porta (DEV/TST): `8081`
 - Endpoint principal:
   - `GET http://localhost:8081/vendas`
@@ -65,6 +67,18 @@ Funcao: microservico C (exemplo de "pagamentos").
   - `GET http://localhost:8083/pagamento/status`
   - `POST http://localhost:8083/pagamento/pagamentos`
 
+### `frete-service`
+
+Funcao: microservico D (exemplo de "frete/envio").
+
+- Calcula o valor e prazo de entrega baseado no CEP de destino.
+- Registra-se no Eureka com o nome `frete-service`.
+- Porta (DEV/TST): `8084`
+- Endpoint principal:
+  - `POST http://localhost:8084/frete/calcular`
+  - `DELETE http://localhost:8084/frete/calcular/{freteId}`
+- Simula falhas e latencia via `frete.failRate` e `frete.delayMs` (application.yml).
+
 ## Fluxo De Pedido (Inter-service)
 
 O objetivo e simular dependencia real entre servicos usando Service Discovery.
@@ -72,10 +86,13 @@ O objetivo e simular dependencia real entre servicos usando Service Discovery.
 1. Cliente chama o Gateway: `POST /vendas/pedidos`
 2. `vendas-service` chama `estoque-service` via Eureka (nome do servico, sem URL hardcoded):
    - `POST http://estoque-service/estoque/reservas`
-3. Se o estoque reservar, `vendas-service` chama `pagamento-service` via Eureka:
+3. Se o estoque reservar, `vendas-service` chama `frete-service` via Eureka:
+   - `POST http://frete-service/frete/calcular`
+4. Se o frete calcular, `vendas-service` chama `pagamento-service` via Eureka:
    - `POST http://pagamento-service/pagamento/pagamentos`
-4. Se o pagamento falhar, `vendas-service` tenta compensar:
+5. Se o pagamento falhar, `vendas-service` tenta compensar:
    - `DELETE http://estoque-service/estoque/reservas/{reservaId}`
+   - `DELETE http://frete-service/frete/calcular/{freteId}`
 
 ### Exemplo de requisicao
 
@@ -84,16 +101,72 @@ O objetivo e simular dependencia real entre servicos usando Service Discovery.
 Body:
 
 ```json
-{ "sku": "ABC-123", "quantidade": 1, "valor": 120.50 }
+{ "sku": "ABC-123", "quantidade": 1, "valor": 120.50, "cepDestino": "01310-100" }
 ```
 
 ## Circuit Breaker (Resilience4j)
 
-O `vendas-service` usa circuit breaker em chamadas de estoque e pagamento (para estudar falhas, timeouts e recuperacao).
+O `vendas-service` usa Resilience4j Circuit Breaker em chamadas de estoque, frete e pagamento, protegendo contra falhas em cascata e latencia elevada.
 
-// TODO ⬅️
+### Configuracao das Instancias
 
-- Configure falhas/latencia no `pagamento-service` via `pagamento.failRate` e `pagamento.delayMs` (application.yml).
+Cada circuit breaker (`estoque`, `frete` e `pagamento`) e configurado via `application.yml`:
+
+| Parametro | Valor | Explicacao |
+|-----------|-------|------------|
+| `slidingWindowType` | COUNT_BASED | Janela deslizante contabiliza **quantidade** de chamadas (TIME_BASED contabiliza tempo). |
+| `slidingWindowSize` | 10 | Quantidade de chamadas na janela para calcular a taxa de falha. |
+| `minimumNumberOfCalls` | 5 | Minimo de chamadas antes de avaliar a taxa (evita abrir com poucos dados). |
+| `failureRateThreshold` | 50 | Percentual de falhas que dispara a transicao para OPEN. |
+| `slowCallRateThreshold` | 60 | Percentual de chamadas lentas que tambem dispara a transicao para OPEN. |
+| `slowCallDurationThreshold` | 2s | Chamadas com duracao superior sao consideradas lentas (slow calls). |
+| `waitDurationInOpenState` | 10s | Tempo que o circuit breaker fica OPEN antes de tentar HALF_OPEN. |
+| `permittedNumberOfCallsInHalfOpenState` | 3 | Chamadas permitidas no estado HALF_OPEN para testar se o servico voltou. |
+| `automaticTransitionFromOpenToHalfOpenEnabled` | true | Transicao automatica de OPEN para HALF_OPEN apos waitDuration (sem precisar de chamada). |
+| `recordExceptions` | IOException, TimeoutException, HttpServerErrorException, ResourceAccessException | Excecoes registradas como falhas no calculo da taxa. |
+| `ignoreExceptions` | DominioException | Excecoes de negocio que **nao** contam como falhas (evita abrir circuit breaker por erros de validacao). |
+
+### Estados do Circuit Breaker
+
+```
+        falhas >= threshold
+  CLOSED ──────────────────► OPEN
+    ▲                            │
+    │                            │ waitDuration
+    │                            ▼
+    └── chamadas OK ────── HALF_OPEN
+         >= threshold
+```
+
+- **CLOSED**: Chamadas passam normalmente. Taxa de falha e monitorada.
+- **OPEN**: Chamadas sao rejeitadas imediatamente (fallback acionado).
+- **HALF_OPEN**: Chamadas de teste sao permitidas. Se OK, volta pra CLOSED; senao, volta pra OPEN.
+
+### Fallbacks
+
+Quando o circuit breaker aciona o fallback, as respostas retornam status semanticos:
+
+| Metodo | Status no Fallback | Significado |
+|--------|--------------------|-------------|
+| `reservarEstoque()` | `INDISPONIVEL` | Estoque-service fora ou com circuit breaker OPEN. |
+| `calcularFrete()` | `INDISPONIVEL` | Frete-service fora ou com circuit breaker OPEN. |
+| `processarPagamento()` | `FALHA_TRANSITORIA` | Pagamento-service fora ou com circuit breaker OPEN. |
+
+O `PedidoCore` verifica esses status e toma decisao (rejeitar pedido, compensar estoque/frete, etc).
+
+### Como Testar
+
+1. Configure falhas no `frete-service` ou `pagamento-service` via `application.yml`:
+   - `frete.failRate=0.8` (80% de falhas simuladas no frete)
+   - `frete.delayMs=3000` (latencia simulada de 3s no frete)
+   - `pagamento.failRate=0.8` (80% de falhas simuladas no pagamento)
+   - `pagamento.delayMs=3000` (latencia simulada de 3s no pagamento)
+
+2. Apos 5 chamadas (minimumNumberOfCalls), o circuit breaker correspondente deve abrir.
+
+3. Chamadas subsequentes acionam o fallback sem chamar o servico remoto.
+
+4. Apos 10s (waitDuration), o circuit breaker entra em HALF_OPEN e testa novamente.
 
 - [X] Observe metricas em `GET /actuator/metrics` e `GET /actuator/prometheus` (em cada servico).
 
@@ -114,6 +187,7 @@ Os servicos agora registram logs por etapa do fluxo:
 - entrada no gateway, rota escolhida e tempo total da chamada;
 - validacao e criacao do pedido no `vendas-service`;
 - reserva e cancelamento de estoque no `estoque-service`;
+- calculo e cancelamento de frete no `frete-service`;
 - simulacao, aprovacao e falhas do pagamento no `pagamento-service`.
 
 Os logs usam `traceId` e `spanId` no pattern, entao quando o Zipkin estiver ativo fica mais facil correlacionar uma mesma requisicao entre servicos.
@@ -141,6 +215,7 @@ No `docker-compose.yml`, cada container recebe:
    - `POST http://localhost:8080/vendas/pedidos`
    - `GET http://localhost:8080/estoque/itens`
    - `GET http://localhost:8080/pagamento/status`
+   - `POST http://localhost:8080/frete/calcular`
 
 ### DEV (multiplas instancias: Load Balancer)
 
@@ -148,12 +223,13 @@ No `docker-compose.yml`, cada container recebe:
 > Os únicos serviços com porta fixa são o `api-gateway` e o `vendas-service`.
 > Ambos estão sendo monitorados.
 
-Para simular mais de 1 instancia localmente (sem conflito de porta), use o profile `dev` no `estoque-service` e no `pagamento-service` (ele usa `server.port=0`).
+Para simular mais de 1 instancia localmente (sem conflito de porta), use o profile `dev` no `estoque-service`, `pagamento-service` e `frete-service` (ele usa `server.port=0`).
 
-Em dois terminais diferentes, no mesmo servico:
+Em terminais diferentes, no mesmo servico:
 
 - `pagamento-service`: execute duas vezes com `SPRING_PROFILES_ACTIVE=dev`
 - `estoque-service`: execute duas vezes com `SPRING_PROFILES_ACTIVE=dev`
+- `frete-service`: execute duas vezes com `SPRING_PROFILES_ACTIVE=dev`
 
 Comando para rodar com o profile `dev`:  
 `mvn spring-boot:run "-Dspring-boot.run.profiles=dev"`
@@ -179,26 +255,28 @@ Gateway:
 - `http://localhost:8080/vendas/pedidos`
 - `http://localhost:8080/estoque/itens`
 - `http://localhost:8080/pagamento/status`
+- `http://localhost:8080/frete/calcular`
 
 ## Load Balancing (Spring Cloud LoadBalancer)
 
 Este ecosistema usa Spring Cloud LoadBalancer para distribuir chamadas quando houver mais de uma instancia do mesmo servico registrada no Eureka:
 
 - Gateway: rotas `lb://...` passam pelo LoadBalancer.
-- Vendas: chamadas Feign para `estoque-service` e `pagamento-service` passam pelo LoadBalancer.
+- Vendas: chamadas Feign para `estoque-service`, `frete-service` e `pagamento-service` passam pelo LoadBalancer.
 
 ### Como ver funcionando (Docker)
 
 > ❓Descobrir sobre as portas ao subir com o `--scale pagamento-service=2`.
  
-Suba com mais de uma instancia de `pagamento-service` e `estoque-service`:
+Suba com mais de uma instancia de `pagamento-service`, `estoque-service` e `frete-service`:
 
-- `docker compose up --build --scale pagamento-service=2 --scale estoque-service=2`
+- `docker compose up --build --scale pagamento-service=2 --scale estoque-service=2 --scale frete-service=2`
 
 Teste repetidamente pelos endpoints de "whoami" expostos pelo gateway:
 
 - `http://localhost:8080/whoami/pagamento`
 - `http://localhost:8080/whoami/estoque`
+- `http://localhost:8080/whoami/frete`
 - `http://localhost:8080/whoami/vendas`
 
 Em chamadas sequenciais, o `instanceId` deve alternar entre instancias (ex.: round-robin).

@@ -65,6 +65,19 @@ services:
     networks:
       - ms-net
 
+  frete-service:
+    build:
+      context: ./frete-service
+      dockerfile: Dockerfile
+    container_name: frete-service
+    depends_on:
+      - discovery
+    environment:
+      - EUREKA_URI=http://discovery:8761/eureka
+      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
+    networks:
+      - ms-net
+
 networks:
   ms-net:
     driver: bridge

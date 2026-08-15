@@ -43,17 +43,71 @@ resilience4j:
   circuitbreaker:
     instances:
       estoque:
+        # === Janela Deslizante ===
+        # COUNT_BASED: janela contabiliza chamadas. TIME_BASED: janela contabiliza tempo.
         slidingWindowType: COUNT_BASED
+        # Quantidade de chamadas na janela para calcular a taxa de falha.
         slidingWindowSize: 10
+        # Minimo de chamadas antes de avaliar a taxa de falha (evita abrir com poucos dados).
         minimumNumberOfCalls: 5
+        # === Limiares de Falha ===
+        # Percentual de falhas que dispara a transicao para OPEN.
         failureRateThreshold: 50
+        # Chamadas lentas tambem contam como "insatisfatorias" ( Slow Call ).
+        slowCallRateThreshold: 60
+        # Se uma chamada durar mais que isso, e considerada lenta.
+        slowCallDurationThreshold: 2s
+        # === Estado OPEN → HALF_OPEN ===
+        # Tempo que o circuit breaker fica OPEN antes de tentar HALF_OPEN.
         waitDurationInOpenState: 10s
+        # Quantas chamadas sao permitidas no estado HALF_OPEN para testar se o servico voltou.
+        permittedNumberOfCallsInHalfOpenState: 3
+        # Transicao automatica de OPEN para HALF_OPEN apos waitDuration (sem precisar de chamada).
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        # === Excecoes ===
+        # Quais excecoes sao registradas como falhas (todas por padrao).
+        recordExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+        # Excecoes que NAO sao contabilizadas como falhas (erros de negocio do cliente).
+        ignoreExceptions:
+          - com.example.vendas.integration.exceptions.DominioException
       pagamento:
         slidingWindowType: COUNT_BASED
         slidingWindowSize: 10
         minimumNumberOfCalls: 5
         failureRateThreshold: 50
+        slowCallRateThreshold: 60
+        slowCallDurationThreshold: 2s
         waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        recordExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+        ignoreExceptions:
+          - com.example.vendas.integration.exceptions.DominioException
+      frete:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        slowCallRateThreshold: 60
+        slowCallDurationThreshold: 2s
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        recordExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+        ignoreExceptions:
+          - com.example.vendas.integration.exceptions.DominioException
 
 logging:
   pattern:
