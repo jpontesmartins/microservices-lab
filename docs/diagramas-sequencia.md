@@ -31,7 +31,7 @@ sequenceDiagram
 
 ## Caso 2: Erro (Falha no Pagamento + Compensacao)
 
-Neste caso, o `pagamento-service` devolve `503` (ou ocorre timeout). O `vendas-service` aciona o fallback do circuit breaker e tenta compensar cancelando a reserva no estoque (best-effort).
+Neste caso, o `pagamento-service` devolve `503` (ou ocorre timeout). O `vendas-service` aciona o fallback do circuit breaker (retorna `FALHA_TRANSITORIA`) e tenta compensar cancelando a reserva no estoque e o frete (best-effort).
 
 ```mermaid
 sequenceDiagram
@@ -58,7 +58,7 @@ sequenceDiagram
     V->>S: DELETE /estoque/reservas/{reservaId}\n(compensacao best-effort)
     S-->>V: 204 No Content (ou 404 se ja nao existir)
 
-    V-->>G: 200 PedidoResponse\n{status=FALHA_PAGAMENTO, reservaId}
+    V-->>G: 200 PedidoResponse\n{status=FALHA_TRANSITORIA, reservaId}
     G-->>C: 200 PedidoResponse
 ```
 

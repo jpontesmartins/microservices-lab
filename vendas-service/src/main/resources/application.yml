@@ -64,16 +64,9 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 3
         # Transicao automatica de OPEN para HALF_OPEN apos waitDuration (sem precisar de chamada).
         automaticTransitionFromOpenToHalfOpenEnabled: true
-        # === Excecoes ===
-        # Quais excecoes sao registradas como falhas (todas por padrao).
-        recordExceptions:
-          - java.io.IOException
-          - java.util.concurrent.TimeoutException
-          - org.springframework.web.client.HttpServerErrorException
-          - org.springframework.web.client.ResourceAccessException
-        # Excecoes que NAO sao contabilizadas como falhas (erros de negocio do cliente).
+        # Erros de negocio (4xx) nao devem abrir o circuito.
         ignoreExceptions:
-          - com.example.vendas.integration.exceptions.DominioException
+          - com.example.vendas.integration.BusinessException
       pagamento:
         slidingWindowType: COUNT_BASED
         slidingWindowSize: 10
@@ -84,13 +77,8 @@ resilience4j:
         waitDurationInOpenState: 10s
         permittedNumberOfCallsInHalfOpenState: 3
         automaticTransitionFromOpenToHalfOpenEnabled: true
-        recordExceptions:
-          - java.io.IOException
-          - java.util.concurrent.TimeoutException
-          - org.springframework.web.client.HttpServerErrorException
-          - org.springframework.web.client.ResourceAccessException
         ignoreExceptions:
-          - com.example.vendas.integration.exceptions.DominioException
+          - com.example.vendas.integration.BusinessException
       frete:
         slidingWindowType: COUNT_BASED
         slidingWindowSize: 10
@@ -101,13 +89,8 @@ resilience4j:
         waitDurationInOpenState: 10s
         permittedNumberOfCallsInHalfOpenState: 3
         automaticTransitionFromOpenToHalfOpenEnabled: true
-        recordExceptions:
-          - java.io.IOException
-          - java.util.concurrent.TimeoutException
-          - org.springframework.web.client.HttpServerErrorException
-          - org.springframework.web.client.ResourceAccessException
         ignoreExceptions:
-          - com.example.vendas.integration.exceptions.DominioException
+          - com.example.vendas.integration.BusinessException
 
 logging:
   pattern:

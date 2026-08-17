@@ -2,6 +2,7 @@ package com.example.vendas.core;
 
 import com.example.vendas.core.dto.CriarPedidoRequest;
 import com.example.vendas.core.dto.PedidoResponse;
+import com.example.vendas.integration.BusinessException;
 import com.example.vendas.integration.IntegracoesService;
 import com.example.vendas.integration.dto.FreteResponse;
 import com.example.vendas.integration.dto.PagamentoResponse;
@@ -72,10 +73,10 @@ class PedidoCoreTest {
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_ESTOQUE quando estoque falha")
-        void deveRetornarFALHA_ESTOQUEQuandoEstoqueFalha() {
+        @DisplayName("deve retornar FALHA_ESTOQUE quando estoque falha com erro de negocio")
+        void deveRetornarFALHA_ESTOQUEQuandoEstoqueFalhaComErroDeNegocio() {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2)))
-                    .thenReturn(new ReservaResponse(null, "INDISPONIVEL", "SKU-ABC", 2, "pedido-001"));
+                    .thenThrow(new BusinessException("FALHA_ESTOQUE", null));
 
             PedidoResponse response = pedidoCore.criarPedido(requestValido);
 
@@ -86,24 +87,35 @@ class PedidoCoreTest {
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_ESTOQUE quando estoque retorna null")
-        void deveRetornarFALHA_ESTOQUEQuandoEstoqueRetornaNull() {
+        @DisplayName("deve retornar FALHA_TRANSITORIA quando estoque retorna null (erro de servidor)")
+        void deveRetornarFALHA_TRANSITORIAQuandoEstoqueRetornaNull() {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(null);
 
             PedidoResponse response = pedidoCore.criarPedido(requestValido);
 
-            assertThat(response.status()).isEqualTo("FALHA_ESTOQUE");
+            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_FRETE quando frete falha e compensar estoque")
-        void deveRetornarFALHA_FRETEQuandoFreteFalhaECompensarEstoque() {
+        @DisplayName("deve retornar FALHA_TRANSITORIA quando estoque retorna resposta com status FALHA_TRANSITORIA")
+        void deveRetornarFALHA_TRANSITORIAQuandoEstoqueRetornaRespostaComFALHA_TRANSITORIA() {
+            when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2)))
+                    .thenReturn(new ReservaResponse(null, "FALHA_TRANSITORIA", "SKU-ABC", 2, "pedido-001"));
+
+            PedidoResponse response = pedidoCore.criarPedido(requestValido);
+
+            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
+            assertThat(response.reservaId()).isNull();
+        }
+
+        @Test
+        @DisplayName("deve retornar FALHA_FRETE quando frete falha com erro de negocio e compensar estoque")
+        void deveRetornarFALHA_FRETEQuandoFreteFalhaComErroDeNegocioECompensarEstoque() {
             ReservaResponse reserva = new ReservaResponse("reserva-001", "RESERVADO", "SKU-ABC", 2, "pedido-001");
-            FreteResponse freteIndisponivel = new FreteResponse(null, "INDISPONIVEL", "pedido-001", 0.0, null);
 
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100")))
-                    .thenReturn(freteIndisponivel);
+                    .thenThrow(new BusinessException("FALHA_FRETE", null));
 
             PedidoResponse response = pedidoCore.criarPedido(requestValido);
 
@@ -115,8 +127,8 @@ class PedidoCoreTest {
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_FRETE quando frete retorna null e compensar estoque")
-        void deveRetornarFALHA_FRETEQuandoFreteRetornaNullECompensarEstoque() {
+        @DisplayName("deve retornar FALHA_TRANSITORIA quando frete retorna null (erro de servidor) e compensar estoque")
+        void deveRetornarFALHA_TRANSITORIAQuandoFreteRetornaNullECompensarEstoque() {
             ReservaResponse reserva = new ReservaResponse("reserva-001", "RESERVADO", "SKU-ABC", 2, "pedido-001");
 
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
@@ -124,24 +136,38 @@ class PedidoCoreTest {
 
             PedidoResponse response = pedidoCore.criarPedido(requestValido);
 
-            assertThat(response.status()).isEqualTo("FALHA_FRETE");
+            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_PAGAMENTO quando pagamento falha e compensar estoque e frete")
-        void deveRetornarFALHA_PAGAMENTOQuandoPagamentoFalhaECompensarEstoqueEFrete() {
+        @DisplayName("deve retornar FALHA_TRANSITORIA quando frete retorna resposta com status FALHA_TRANSITORIA e compensar estoque")
+        void deveRetornarFALHA_TRANSITORIAQuandoFreteRetornaRespostaComFALHA_TRANSITORIA() {
             ReservaResponse reserva = new ReservaResponse("reserva-001", "RESERVADO", "SKU-ABC", 2, "pedido-001");
-            FreteResponse frete = new FreteResponse("frete-001", "CALCULADO", "pedido-001", 20.0, "3 dias uteis");
-            PagamentoResponse pagamentoIndisponivel = new PagamentoResponse(null, "FALHA_TRANSITORIA", "pedido-001", 140.50);
 
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
-            when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
-            when(integracoes.processarPagamento(anyString(), eq(140.50))).thenReturn(pagamentoIndisponivel);
+            when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100")))
+                    .thenReturn(new FreteResponse(null, "FALHA_TRANSITORIA", "pedido-001", 0.0, null));
 
             PedidoResponse response = pedidoCore.criarPedido(requestValido);
 
-            assertThat(response.status()).isEqualTo("FALHA_PAGAMENTO");
+            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
+            verify(integracoes).cancelarReservaBestEffort("reserva-001");
+        }
+
+        @Test
+        @DisplayName("deve retornar FALHA_TRANSITORIA quando pagamento retorna null (erro de servidor) e compensar estoque e frete")
+        void deveRetornarFALHA_TRANSITORIAQuandoPagamentoRetornaNullECompensarEstoqueEFrete() {
+            ReservaResponse reserva = new ReservaResponse("reserva-001", "RESERVADO", "SKU-ABC", 2, "pedido-001");
+            FreteResponse frete = new FreteResponse("frete-001", "CALCULADO", "pedido-001", 20.0, "3 dias uteis");
+
+            when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
+            when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
+            when(integracoes.processarPagamento(anyString(), eq(140.50))).thenReturn(null);
+
+            PedidoResponse response = pedidoCore.criarPedido(requestValido);
+
+            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             assertThat(response.reservaId()).isEqualTo("reserva-001");
             assertThat(response.freteId()).isEqualTo("frete-001");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
@@ -149,14 +175,35 @@ class PedidoCoreTest {
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_PAGAMENTO quando pagamento retorna null e compensar estoque e frete")
-        void deveRetornarFALHA_PAGAMENTOQuandoPagamentoRetornaNullECompensarEstoqueEFrete() {
+        @DisplayName("deve retornar FALHA_TRANSITORIA quando pagamento retorna resposta com status FALHA_TRANSITORIA e compensar estoque e frete")
+        void deveRetornarFALHA_TRANSITORIAQuandoPagamentoRetornaRespostaComFALHA_TRANSITORIA() {
+            ReservaResponse reserva = new ReservaResponse("reserva-001", "RESERVADO", "SKU-ABC", 2, "pedido-001");
+            FreteResponse frete = new FreteResponse("frete-001", "CALCULADO", "pedido-001", 20.0, "3 dias uteis");
+            PagamentoResponse pagamentoFalhaTransitoria = new PagamentoResponse(null, "FALHA_TRANSITORIA", "pedido-001", 140.50);
+
+            when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
+            when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
+            when(integracoes.processarPagamento(anyString(), eq(140.50))).thenReturn(pagamentoFalhaTransitoria);
+
+            PedidoResponse response = pedidoCore.criarPedido(requestValido);
+
+            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
+            assertThat(response.reservaId()).isEqualTo("reserva-001");
+            assertThat(response.freteId()).isEqualTo("frete-001");
+            verify(integracoes).cancelarReservaBestEffort("reserva-001");
+            verify(integracoes).cancelarFreteBestEffort("frete-001");
+        }
+
+        @Test
+        @DisplayName("deve retornar FALHA_PAGAMENTO quando pagamento falha com erro de negocio e compensar estoque e frete")
+        void deveRetornarFALHA_PAGAMENTOQuandoPagamentoFalhaComErroDeNegocioECompensarEstoqueEFrete() {
             ReservaResponse reserva = new ReservaResponse("reserva-001", "RESERVADO", "SKU-ABC", 2, "pedido-001");
             FreteResponse frete = new FreteResponse("frete-001", "CALCULADO", "pedido-001", 20.0, "3 dias uteis");
 
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
-            when(integracoes.processarPagamento(anyString(), eq(140.50))).thenReturn(null);
+            when(integracoes.processarPagamento(anyString(), eq(140.50)))
+                    .thenThrow(new BusinessException("FALHA_PAGAMENTO", null));
 
             PedidoResponse response = pedidoCore.criarPedido(requestValido);
 

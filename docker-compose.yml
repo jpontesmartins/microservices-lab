@@ -8,6 +8,12 @@ services:
     container_name: discovery
     ports:
       - "8761:8761"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - ms-net
 
@@ -17,7 +23,8 @@ services:
       dockerfile: Dockerfile
     container_name: api-gateway
     depends_on:
-      - discovery
+      discovery:
+        condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
@@ -32,10 +39,13 @@ services:
       dockerfile: Dockerfile
     container_name: vendas-service
     depends_on:
-      - discovery
+      discovery:
+        condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
+    ports:
+      - "8081:8081"
     networks:
       - ms-net
 
@@ -45,10 +55,13 @@ services:
       dockerfile: Dockerfile
     container_name: estoque-service
     depends_on:
-      - discovery
+      discovery:
+        condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
+    ports:
+      - "8082:8082"
     networks:
       - ms-net
 
@@ -58,10 +71,13 @@ services:
       dockerfile: Dockerfile
     container_name: pagamento-service
     depends_on:
-      - discovery
+      discovery:
+        condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
+    ports:
+      - "8083:8083"
     networks:
       - ms-net
 
@@ -71,10 +87,13 @@ services:
       dockerfile: Dockerfile
     container_name: frete-service
     depends_on:
-      - discovery
+      discovery:
+        condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
+    ports:
+      - "8084:8084"
     networks:
       - ms-net
 

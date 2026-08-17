@@ -1,0 +1,398 @@
+{
+	"info": {
+		"name": "Microservices - ROTEIRO de Testes",
+		"description": "Coleção gerada a partir do ROTEIRO.md. Contém todos os endpoints para cada passo de teste do ecossistema de microservices.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "vendasUrl",
+			"value": "http://localhost:8081"
+		},
+		{
+			"key": "estoqueUrl",
+			"value": "http://localhost:8082"
+		},
+		{
+			"key": "pagamentoUrl",
+			"value": "http://localhost:8083"
+		},
+		{
+			"key": "freteUrl",
+			"value": "http://localhost:8084"
+		},
+		{
+			"key": "eurekaUrl",
+			"value": "http://localhost:8761"
+		},
+		{
+			"key": "pedidoId",
+			"value": "",
+			"description": "Preencha com o UUID retornado ao criar um pedido (Passo 7)"
+		},
+		{
+			"key": "reservaId",
+			"value": "",
+			"description": "Preencha com o ID da reserva de estoque"
+		},
+		{
+			"key": "freteId",
+			"value": "",
+			"description": "Preenchina com o ID do frete"
+		}
+	],
+	"item": [
+		{
+			"name": "Passo 5 - Whoami (via Gateway)",
+			"item": [
+				{
+					"name": "Whoami - Vendas",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/vendas",
+						"description": "Retorna {service, instanceId, port} do vendas-service"
+					}
+				},
+				{
+					"name": "Whoami - Estoque",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/estoque",
+						"description": "Retorna {service, instanceId, port} do estoque-service"
+					}
+				},
+				{
+					"name": "Whoami - Pagamento",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/pagamento",
+						"description": "Retorna {service, instanceId, port} do pagamento-service"
+					}
+				},
+				{
+					"name": "Whoami - Frete",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/frete",
+						"description": "Retorna {service, instanceId, port} do frete-service"
+					}
+				}
+			]
+		},
+		{
+			"name": "Passo 6 - Endpoints Diretos (sem Gateway)",
+			"item": [
+				{
+					"name": "Listar itens em estoque",
+					"request": {
+						"method": "GET",
+						"url": "{{estoqueUrl}}/estoque/itens",
+						"description": "Lista todos os itens disponíveis em estoque"
+					}
+				},
+				{
+					"name": "Status de pagamento",
+					"request": {
+						"method": "GET",
+						"url": "{{pagamentoUrl}}/pagamento/status",
+						"description": "Verifica o status do serviço de pagamentos"
+					}
+				},
+				{
+					"name": "Listar vendas",
+					"request": {
+						"method": "GET",
+						"url": "{{vendasUrl}}/vendas",
+						"description": "Lista todas as vendas registradas"
+					}
+				}
+			]
+		},
+		{
+			"name": "Passo 7 - Criar Pedido (fluxo completo)",
+			"item": [
+				{
+					"name": "Criar Pedido",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/vendas/pedidos",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"ABC-123\",\n  \"quantidade\": 2,\n  \"valor\": 199.90,\n  \"cepDestino\": \"01310-100\"\n}"
+						},
+						"description": "Fluxo principal: vendas-service orquestra estoque → frete → pagamento. Copie o pedidoId da resposta para as variáveis de coleção."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.pedidoId) {",
+									"    pm.collectionVariables.set('pedidoId', jsonData.pedidoId);",
+									"    console.log('pedidoId salvo: ' + jsonData.pedidoId);",
+									"}",
+									"if (jsonData.reservaEstoque && jsonData.reservaEstoque.reservaId) {",
+									"    pm.collectionVariables.set('reservaId', jsonData.reservaEstoque.reservaId);",
+									"    console.log('reservaId salvo: ' + jsonData.reservaEstoque.reservaId);",
+									"}",
+									"if (jsonData.frete && jsonData.frete.freteId) {",
+									"    pm.collectionVariables.set('freteId', jsonData.frete.freteId);",
+									"    console.log('freteId salvo: ' + jsonData.frete.freteId);",
+									"}"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Passo 8 - Consultar Pedido",
+			"item": [
+				{
+					"name": "Buscar Pedido por ID",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/vendas/pedidos/{{pedidoId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["vendas", "pedidos", "{{pedidoId}}"]
+						},
+						"description": "Busca o pedido criado no Passo 7 pelo UUID"
+					}
+				}
+			]
+		},
+		{
+			"name": "Passo 9 - Cenários de Falha",
+			"item": [
+				{
+					"name": "Estoque insuficiente",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/vendas/pedidos",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"XYZ-789\",\n  \"quantidade\": 999,\n  \"valor\": 50.00,\n  \"cepDestino\": \"01310-100\"\n}"
+						},
+						"description": "Quantidade maior que o estoque disponível. Espera-se erro de estoque e compensação (cancelamento de frete/reserva)."
+					}
+				},
+				{
+					"name": "SKU inexistente",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/vendas/pedidos",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"NAO-EXISTE\",\n  \"quantidade\": 1,\n  \"valor\": 100.00,\n  \"cepDestino\": \"01310-100\"\n}"
+						},
+						"description": "SKU que não existe no estoque. Espera-se erro de validação."
+					}
+				}
+			]
+		},
+		{
+			"name": "Passo 10 - Circuit Breaker (Resilience4j)",
+			"item": [
+				{
+					"name": "Criar Pedido (para abrir CB)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/vendas/pedidos",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"ABC-123\",\n  \"quantidade\": 1,\n  \"valor\": 10.00,\n  \"cepDestino\": \"01310-100\"\n}"
+						},
+						"description": "Execute 5 vezes com pagamento.failRate=1.0 para abrir o circuit breaker. Após 5 falhas, o CB abre e retorna FALHA_TRANSITORIA (fallback) imediatamente."
+					}
+				},
+				{
+					"name": "Métricas do Circuit Breaker",
+					"request": {
+						"method": "GET",
+						"url": "{{vendasUrl}}/actuator/metrics/resilience4j.circuitbreaker.state",
+						"description": "Verifica o estado atual do circuit breaker via métricas do Actuator"
+					}
+				}
+			]
+		},
+		{
+			"name": "Passo 11 - Cancelamento",
+			"item": [
+				{
+					"name": "Cancelar reserva de estoque",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{estoqueUrl}}/estoque/reservas/{{reservaId}}",
+							"host": ["{{estoqueUrl}}"],
+							"path": ["estoque", "reservas", "{{reservaId}}"]
+						},
+						"description": "Cancela uma reserva de estoque diretamente no estoque-service"
+					}
+				},
+				{
+					"name": "Cancelar frete",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{freteUrl}}/frete/calcular/{{freteId}}",
+							"host": ["{{freteUrl}}"],
+							"path": ["frete", "calcular", "{{freteId}}"]
+						},
+						"description": "Cancela um frete diretamente no frete-service"
+					}
+				}
+			]
+		},
+		{
+			"name": "Passo 12 - Observabilidade",
+			"item": [
+				{
+					"name": "Prometheus - Métricas API Gateway",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/actuator/prometheus",
+						"description": "Métricas no formato Prometheus do API Gateway"
+					}
+				},
+				{
+					"name": "Prometheus - Métricas vendas-service",
+					"request": {
+						"method": "GET",
+						"url": "{{vendasUrl}}/actuator/prometheus",
+						"description": "Métricas no formato Prometheus do vendas-service"
+					}
+				},
+				{
+					"name": "Grafana",
+					"request": {
+						"method": "GET",
+						"url": "http://localhost:3000",
+						"description": "Acesse http://localhost:3000 | Login: admin/admin | Data source: http://prometheus:9090"
+					}
+				},
+				{
+					"name": "Zipkin",
+					"request": {
+						"method": "GET",
+						"url": "http://localhost:9411",
+						"description": "Acesse http://localhost:9411 → Find Traces para ver o fluxo completo de uma requisição"
+					}
+				}
+			]
+		},
+		{
+			"name": "Passo 13 - Load Balancing",
+			"item": [
+				{
+					"name": "Whoami Vendas (round-robin)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/vendas",
+						"description": "Execute várias vezes. Se houver múltiplas instâncias, o instanceId e/ou port devem variar (round-robin)."
+					}
+				},
+				{
+					"name": "Whoami Estoque (round-robin)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/estoque",
+						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de estoque."
+					}
+				},
+				{
+					"name": "Whoami Pagamento (round-robin)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/pagamento",
+						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de pagamento."
+					}
+				},
+				{
+					"name": "Whoami Frete (round-robin)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/frete",
+						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de frete."
+					}
+				}
+			]
+		},
+		{
+			"name": "Passo 14 - Health Checks",
+			"item": [
+				{
+					"name": "Health - API Gateway",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/actuator/health",
+						"description": "Verifica a saúde do API Gateway"
+					}
+				},
+				{
+					"name": "Health - vendas-service",
+					"request": {
+						"method": "GET",
+						"url": "{{vendasUrl}}/actuator/health",
+						"description": "Verifica a saúde do vendas-service"
+					}
+				},
+				{
+					"name": "Health - estoque-service",
+					"request": {
+						"method": "GET",
+						"url": "{{estoqueUrl}}/actuator/health",
+						"description": "Verifica a saúde do estoque-service"
+					}
+				},
+				{
+					"name": "Health - pagamento-service",
+					"request": {
+						"method": "GET",
+						"url": "{{pagamentoUrl}}/actuator/health",
+						"description": "Verifica a saúde do pagamento-service"
+					}
+				},
+				{
+					"name": "Health - frete-service",
+					"request": {
+						"method": "GET",
+						"url": "{{freteUrl}}/actuator/health",
+						"description": "Verifica a saúde do frete-service"
+					}
+				}
+			]
+		}
+	]
+}

@@ -2,6 +2,7 @@ package com.example.vendas.core;
 
 import com.example.vendas.core.dto.CriarPedidoRequest;
 import com.example.vendas.core.dto.PedidoResponse;
+import com.example.vendas.integration.BusinessException;
 import com.example.vendas.integration.IntegracoesService;
 import com.example.vendas.integration.dto.FreteResponse;
 import com.example.vendas.integration.dto.PagamentoResponse;
@@ -40,13 +41,19 @@ public class PedidoCore {
 
         // === Etapa 1: Reserva de Estoque ===
         log.info("Solicitando reserva de estoque (pedidoId={}, sku={}, quantidade={})", pedidoId, request.sku(), request.quantidade());
-        ReservaResponse reserva = integracoes.reservarEstoque(pedidoId, request.sku(), request.quantidade());
+        ReservaResponse reserva;
+        try {
+            reserva = integracoes.reservarEstoque(pedidoId, request.sku(), request.quantidade());
+        } catch (BusinessException ex) {
+            state.status = ex.getStatus();
+            log.warn("Reserva de estoque falhou por erro de negocio (pedidoId={}, status={}, causa={})",
+                    pedidoId, state.status, ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "desconhecida");
+            return state.toResponse();
+        }
 
-        // Verifica se a reserva falhou (null) ou se o circuit breaker retornou status INDISPONIVEL.
-        if (reserva == null || "INDISPONIVEL".equals(reserva.status())) {
-            state.status = "FALHA_ESTOQUE";
-            log.warn("Reserva de estoque nao concluida (pedidoId={}, status={}, causa={})",
-                    pedidoId, state.status, reserva != null ? reserva.status() : "null");
+        if (reserva == null || "FALHA_TRANSITORIA".equals(reserva.status())) {
+            state.status = "FALHA_TRANSITORIA";
+            log.warn("Reserva de estoque nao concluida (pedidoId={}, causa=null)", pedidoId);
             return state.toResponse();
         }
         state.reservaId = reserva.reservaId();
@@ -56,14 +63,22 @@ public class PedidoCore {
         // === Etapa 2: Calculo de Frete ===
         log.info("Solicitando calculo de frete (pedidoId={}, sku={}, quantidade={}, cepDestino={})",
                 pedidoId, request.sku(), request.quantidade(), request.cepDestino());
-        FreteResponse frete = integracoes.calcularFrete(pedidoId, request.sku(), request.quantidade(), request.cepDestino());
+        FreteResponse frete;
+        try {
+            frete = integracoes.calcularFrete(pedidoId, request.sku(), request.quantidade(), request.cepDestino());
+        } catch (BusinessException ex) {
+            state.status = ex.getStatus();
+            log.warn("Calculo de frete falhou por erro de negocio (pedidoId={}, reservaId={}, status={}, causa={})",
+                    pedidoId, state.reservaId, state.status, ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "desconhecida");
+            log.info("Iniciando compensacao best-effort de estoque (pedidoId={}, reservaId={})", pedidoId, state.reservaId);
+            integracoes.cancelarReservaBestEffort(state.reservaId);
+            log.info("Compensacao best-effort concluida ou tentativa encerrada (pedidoId={}, reservaId={})", pedidoId, state.reservaId);
+            return state.toResponse();
+        }
 
-        // Verifica se o frete falhou (null) ou se o circuit breaker retornou status INDISPONIVEL.
-        if (frete == null || "INDISPONIVEL".equals(frete.status())) {
-            state.status = "FALHA_FRETE";
-            log.warn("Calculo de frete nao concluido (pedidoId={}, reservaId={}, status={}, causa={})",
-                    pedidoId, state.reservaId, state.status, frete != null ? frete.status() : "null");
-            // Best-effort: devolve o estoque caso o frete falhe.
+        if (frete == null || "FALHA_TRANSITORIA".equals(frete.status())) {
+            state.status = "FALHA_TRANSITORIA";
+            log.warn("Calculo de frete nao concluido (pedidoId={}, reservaId={}, causa=null)", pedidoId, state.reservaId);
             log.info("Iniciando compensacao best-effort de estoque (pedidoId={}, reservaId={})", pedidoId, state.reservaId);
             integracoes.cancelarReservaBestEffort(state.reservaId);
             log.info("Compensacao best-effort concluida ou tentativa encerrada (pedidoId={}, reservaId={})", pedidoId, state.reservaId);
@@ -80,14 +95,27 @@ public class PedidoCore {
         double valorTotal = request.valor() + state.valorFrete;
         log.info("Solicitando pagamento (pedidoId={}, valorProduto={}, valorFrete={}, valorTotal={})",
                 pedidoId, request.valor(), state.valorFrete, valorTotal);
-        PagamentoResponse pagamento = integracoes.processarPagamento(pedidoId, valorTotal);
+        PagamentoResponse pagamento;
+        try {
+            pagamento = integracoes.processarPagamento(pedidoId, valorTotal);
+        } catch (BusinessException ex) {
+            state.status = ex.getStatus();
+            log.warn("Pagamento falhou por erro de negocio (pedidoId={}, reservaId={}, freteId={}, status={}, causa={})",
+                    pedidoId, state.reservaId, state.freteId, state.status,
+                    ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "desconhecida");
+            log.info("Iniciando compensacao best-effort de estoque e frete (pedidoId={}, reservaId={}, freteId={})",
+                    pedidoId, state.reservaId, state.freteId);
+            integracoes.cancelarReservaBestEffort(state.reservaId);
+            integracoes.cancelarFreteBestEffort(state.freteId);
+            log.info("Compensacao best-effort concluida ou tentativa encerrada (pedidoId={}, reservaId={}, freteId={})",
+                    pedidoId, state.reservaId, state.freteId);
+            return state.toResponse();
+        }
 
-        // Verifica se o pagamento falhou (null) ou se o circuit breaker retornou status FALHA_TRANSITORIA.
         if (pagamento == null || "FALHA_TRANSITORIA".equals(pagamento.status())) {
-            state.status = "FALHA_PAGAMENTO";
-            log.warn("Pagamento nao concluido (pedidoId={}, reservaId={}, freteId={}, status={}, causa={})",
-                    pedidoId, state.reservaId, state.freteId, state.status, pagamento != null ? pagamento.status() : "null");
-            // Best-effort: devolve estoque e cancela frete caso o pagamento falhe.
+            state.status = "FALHA_TRANSITORIA";
+            log.warn("Pagamento nao concluido (pedidoId={}, reservaId={}, freteId={}, causa=null)",
+                    pedidoId, state.reservaId, state.freteId);
             log.info("Iniciando compensacao best-effort de estoque e frete (pedidoId={}, reservaId={}, freteId={})",
                     pedidoId, state.reservaId, state.freteId);
             integracoes.cancelarReservaBestEffort(state.reservaId);

@@ -57,20 +57,7 @@ public class FreteController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cepDestino obrigatorio");
         }
 
-        // Simula latencia/falhas para estudar timeouts + circuit breaker.
-        if (delayMs > 0) {
-            log.info("Simulando latencia de frete (pedidoId={}, delayMs={})", request.pedidoId(), delayMs);
-            try {
-                Thread.sleep(delayMs);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.warn("Latencia simulada interrompida (pedidoId={})", request.pedidoId());
-            }
-        }
-        if (ThreadLocalRandom.current().nextDouble() < failRate) {
-            log.warn("Falha simulada no frete (pedidoId={}, failRate={})", request.pedidoId(), failRate);
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Falha simulada no servico de frete");
-        }
+        simularFalha(request.pedidoId());
 
         try {
             FreteResponse response = frete.calcular(request);
@@ -105,12 +92,29 @@ public class FreteController {
         log.info("Frete cancelado com sucesso (freteId={})", freteId);
     }
 
-    @PostMapping("/whoami")
-    public Map<String, Object> whoami() {
-        return Map.of(
-                "service", "frete-service",
-                "port", System.getProperty("server.port", "8084"),
-                "instanceId", UUID.randomUUID().toString()
-        );
+    // @PostMapping("/whoami")
+    // public Map<String, Object> whoami() {
+    //     return Map.of(
+    //             "service", "frete-service",
+    //             "port", System.getProperty("server.port", "8084"),
+    //             "instanceId", UUID.randomUUID().toString()
+    //     );
+    // }
+
+    // === Estudo: Simulacao de falhas para testar Circuit Breaker ===
+    private void simularFalha(String pedidoId) {
+        if (delayMs > 0) {
+            log.info("Simulando latencia de frete (pedidoId={}, delayMs={})", pedidoId, delayMs);
+            try {
+                Thread.sleep(delayMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Latencia simulada interrompida (pedidoId={})", pedidoId);
+            }
+        }
+        if (ThreadLocalRandom.current().nextDouble() < failRate) {
+            log.warn("Falha simulada no frete (pedidoId={}, failRate={})", pedidoId, failRate);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Falha simulada no servico de frete");
+        }
     }
 }

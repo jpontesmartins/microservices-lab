@@ -6,6 +6,7 @@ import com.example.vendas.integration.dto.PagamentoRequest;
 import com.example.vendas.integration.dto.PagamentoResponse;
 import com.example.vendas.integration.dto.ReservaRequest;
 import com.example.vendas.integration.dto.ReservaResponse;
+import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -15,7 +16,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,6 +38,16 @@ class IntegracoesServiceTest {
 
     @InjectMocks
     private IntegracoesService integracoesService;
+
+    private static FeignException feignExceptionWithStatus(int status) {
+        return FeignException.errorStatus("test",
+                feign.Response.builder()
+                        .request(feign.Request.create(feign.Request.HttpMethod.GET, "http://test", java.util.Map.of(), null, StandardCharsets.UTF_8, new feign.RequestTemplate()))
+                        .status(status)
+                        .reason("Error " + status)
+                        .body("", StandardCharsets.UTF_8)
+                        .build());
+    }
 
     @Nested
     @DisplayName("reservarEstoque()")
@@ -65,6 +79,29 @@ class IntegracoesServiceTest {
                 assertThat(e.getMessage()).isEqualTo("Estoque indisponivel");
             }
         }
+
+        @Test
+        @DisplayName("deve retornar FALHA_TRANSITORIA quando estoque-client falha com erro de servidor")
+        void deveRetornarFALHA_TRANSITORIAQuandoEstoqueClientFalhaComErroDeServidor() {
+            ReservaResponse fallback = integracoesService.reservaFallback(
+                    "pedido-001", "SKU-ABC", 2,
+                    new RuntimeException("Estoque indisponivel"));
+
+            assertThat(fallback).isNotNull();
+            assertThat(fallback.status()).isEqualTo("FALHA_TRANSITORIA");
+            assertThat(fallback.reservaId()).isNull();
+        }
+
+        @Test
+        @DisplayName("deve lancar BusinessException quando estoque-client falha com erro de negocio (4xx)")
+        void deveLancarBusinessExceptionQuandoEstoqueClientFalhaComErroDeNegocio() {
+            FeignException businessError = feignExceptionWithStatus(409);
+
+            assertThatThrownBy(() -> integracoesService.reservaFallback(
+                    "pedido-001", "SKU-ABC", 2, businessError))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("FALHA_ESTOQUE");
+        }
     }
 
     @Nested
@@ -87,18 +124,27 @@ class IntegracoesServiceTest {
         }
 
         @Test
-        @DisplayName("deve retornar fallback quando frete-client falha")
-        void deveRetornarFallbackQuandoFreteClientFalha() {
-            // O fallback e acionado pelo Resilience4j, nao pelo metodo diretamente.
-            // Aqui testamos o fallback manualmente.
+        @DisplayName("deve retornar FALHA_TRANSITORIA quando frete-client falha com erro de servidor")
+        void deveRetornarFALHA_TRANSITORIAQuandoFreteClientFalhaComErroDeServidor() {
             FreteResponse fallback = integracoesService.freteFallback(
                     "pedido-001", "SKU-ABC", 2, "01310-100",
                     new RuntimeException("Servico de frete indisponivel"));
 
             assertThat(fallback).isNotNull();
-            assertThat(fallback.status()).isEqualTo("INDISPONIVEL");
+            assertThat(fallback.status()).isEqualTo("FALHA_TRANSITORIA");
             assertThat(fallback.valorFrete()).isEqualTo(0.0);
             assertThat(fallback.freteId()).isNull();
+        }
+
+        @Test
+        @DisplayName("deve lancar BusinessException quando frete-client falha com erro de negocio (4xx)")
+        void deveLancarBusinessExceptionQuandoFreteClientFalhaComErroDeNegocio() {
+            FeignException businessError = feignExceptionWithStatus(400);
+
+            assertThatThrownBy(() -> integracoesService.freteFallback(
+                    "pedido-001", "SKU-ABC", 2, "01310-100", businessError))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("FALHA_FRETE");
         }
     }
 
@@ -121,8 +167,8 @@ class IntegracoesServiceTest {
         }
 
         @Test
-        @DisplayName("deve retornar fallback quando pagamento-client falha")
-        void deveRetornarFallbackQuandoPagamentoClientFalha() {
+        @DisplayName("deve retornar FALHA_TRANSITORIA quando pagamento-client falha com erro de servidor")
+        void deveRetornarFALHA_TRANSITORIAQuandoPagamentoClientFalhaComErroDeServidor() {
             PagamentoResponse fallback = integracoesService.pagamentoFallback(
                     "pedido-001", 140.50,
                     new RuntimeException("Servico de pagamento indisponivel"));
@@ -130,6 +176,17 @@ class IntegracoesServiceTest {
             assertThat(fallback).isNotNull();
             assertThat(fallback.status()).isEqualTo("FALHA_TRANSITORIA");
             assertThat(fallback.transacaoId()).isNull();
+        }
+
+        @Test
+        @DisplayName("deve lancar BusinessException quando pagamento-client falha com erro de negocio (4xx)")
+        void deveLancarBusinessExceptionQuandoPagamentoClientFalhaComErroDeNegocio() {
+            FeignException businessError = feignExceptionWithStatus(400);
+
+            assertThatThrownBy(() -> integracoesService.pagamentoFallback(
+                    "pedido-001", 140.50, businessError))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("FALHA_PAGAMENTO");
         }
     }
 

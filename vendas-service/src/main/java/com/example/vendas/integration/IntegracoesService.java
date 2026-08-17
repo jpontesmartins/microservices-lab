@@ -6,6 +6,7 @@ import com.example.vendas.integration.dto.PagamentoRequest;
 import com.example.vendas.integration.dto.PagamentoResponse;
 import com.example.vendas.integration.dto.ReservaRequest;
 import com.example.vendas.integration.dto.ReservaResponse;
+import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +55,10 @@ public class IntegracoesService {
     public ReservaResponse reservaFallback(String pedidoId, String sku, int quantidade, Throwable t) {
         log.warn("Fallback de estoque acionado (pedidoId={}, sku={}, quantidade={}, causa={})",
                 pedidoId, sku, quantidade, t != null ? t.getClass().getSimpleName() : "desconhecida");
-        return new ReservaResponse(null, "INDISPONIVEL", sku, quantidade, pedidoId);
+        if (isBusinessError(t)) {
+            throw new BusinessException("FALHA_ESTOQUE", t);
+        }
+        return new ReservaResponse(null, "FALHA_TRANSITORIA", sku, quantidade, pedidoId);
     }
 
     /**
@@ -88,9 +92,10 @@ public class IntegracoesService {
     public FreteResponse freteFallback(String pedidoId, String sku, int quantidade, String cepDestino, Throwable t) {
         log.warn("Fallback de frete acionado (pedidoId={}, sku={}, quantidade={}, cepDestino={}, causa={})",
                 pedidoId, sku, quantidade, cepDestino, t != null ? t.getClass().getSimpleName() : "desconhecida");
-        // Retorna uma resposta com status INDISPONIVEL.
-        // Isso sinaliza para o PedidoCore que o frete falhou e o pedido nao pode prosseguir.
-        return new FreteResponse(null, "INDISPONIVEL", pedidoId, 0.0, null);
+        if (isBusinessError(t)) {
+            throw new BusinessException("FALHA_FRETE", t);
+        }
+        return new FreteResponse(null, "FALHA_TRANSITORIA", pedidoId, 0.0, null);
     }
 
     /**
@@ -121,7 +126,14 @@ public class IntegracoesService {
     public PagamentoResponse pagamentoFallback(String pedidoId, double valor, Throwable t) {
         log.warn("Fallback de pagamento acionado (pedidoId={}, valor={}, causa={})",
                 pedidoId, valor, t != null ? t.getClass().getSimpleName() : "desconhecida");
+        if (isBusinessError(t)) {
+            throw new BusinessException("FALHA_PAGAMENTO", t);
+        }
         return new PagamentoResponse(null, "FALHA_TRANSITORIA", pedidoId, valor);
+    }
+
+    private static boolean isBusinessError(Throwable t) {
+        return t instanceof FeignException fe && fe.status() >= 400 && fe.status() < 500;
     }
 
     /**

@@ -1,4 +1,4 @@
-# Microservices (Eureka + Gateway) - Java 17
+# Microservices (Eureka + Gateway) - Java 21
 
 Este repositorio contem 6 aplicacoes Spring Boot independentes, para estudo de Service Discovery (Netflix Eureka) e API Gateway (Spring Cloud Gateway).
 
@@ -124,7 +124,7 @@ Cada circuit breaker (`estoque`, `frete` e `pagamento`) e configurado via `appli
 | `permittedNumberOfCallsInHalfOpenState` | 3 | Chamadas permitidas no estado HALF_OPEN para testar se o servico voltou. |
 | `automaticTransitionFromOpenToHalfOpenEnabled` | true | Transicao automatica de OPEN para HALF_OPEN apos waitDuration (sem precisar de chamada). |
 | `recordExceptions` | IOException, TimeoutException, HttpServerErrorException, ResourceAccessException | Excecoes registradas como falhas no calculo da taxa. |
-| `ignoreExceptions` | DominioException | Excecoes de negocio que **nao** contam como falhas (evita abrir circuit breaker por erros de validacao). |
+| `ignoreExceptions` | BusinessException | Erros de negocio (4xx do downstream) que **nao** contam como falhas e **nao** acionam o fallback. |
 
 ### Estados do Circuit Breaker
 
@@ -142,17 +142,18 @@ Cada circuit breaker (`estoque`, `frete` e `pagamento`) e configurado via `appli
 - **OPEN**: Chamadas sao rejeitadas imediatamente (fallback acionado).
 - **HALF_OPEN**: Chamadas de teste sao permitidas. Se OK, volta pra CLOSED; senao, volta pra OPEN.
 
-### Fallbacks
+### Distinguindo Erro de Negocio de Erro de Servidor
 
-Quando o circuit breaker aciona o fallback, as respostas retornam status semanticos:
+Os fallbacks distinguem dois tipos de falha:
 
-| Metodo | Status no Fallback | Significado |
-|--------|--------------------|-------------|
-| `reservarEstoque()` | `INDISPONIVEL` | Estoque-service fora ou com circuit breaker OPEN. |
-| `calcularFrete()` | `INDISPONIVEL` | Frete-service fora ou com circuit breaker OPEN. |
-| `processarPagamento()` | `FALHA_TRANSITORIA` | Pagamento-service fora ou com circuit breaker OPEN. |
+- **Erro de servidor** (5xx, timeout, conexao, CircuitBreaker OPEN): o fallback retorna `FALHA_TRANSITORIA`. O `PedidoCore` seta `FALHA_TRANSITORIA` no pedido e aciona compensacao.
+- **Erro de negocio** (4xx do downstream, ex: "sem estoque"): o fallback lança `BusinessException` (configurada em `ignoreExceptions`). O `PedidoCore` captura e seta `FALHA_ESTOQUE`, `FALHA_FRETE` ou `FALHA_PAGAMENTO` conforme o servico.
 
-O `PedidoCore` verifica esses status e toma decisao (rejeitar pedido, compensar estoque/frete, etc).
+| Metodo | Erro de Servidor (fallback) | Erro de Negocio (BusinessException) |
+|--------|----------------------------|--------------------------------------|
+| `reservarEstoque()` | `FALHA_TRANSITORIA` | `FALHA_ESTOQUE` |
+| `calcularFrete()` | `FALHA_TRANSITORIA` | `FALHA_FRETE` |
+| `processarPagamento()` | `FALHA_TRANSITORIA` | `FALHA_PAGAMENTO` |
 
 ### Como Testar
 

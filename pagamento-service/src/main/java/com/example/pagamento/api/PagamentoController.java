@@ -55,20 +55,7 @@ public class PagamentoController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "valor deve ser > 0");
         }
 
-        // Simula latencia/falhas para estudar timeouts + circuit breaker.
-        if (delayMs > 0) {
-            log.info("Simulando latencia de pagamento (pedidoId={}, delayMs={})", request.pedidoId(), delayMs);
-            try {
-                Thread.sleep(delayMs);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.warn("Latencia simulada interrompida (pedidoId={})", request.pedidoId());
-            }
-        }
-        if (ThreadLocalRandom.current().nextDouble() < failRate) {
-            log.warn("Falha simulada no pagamento (pedidoId={}, failRate={})", request.pedidoId(), failRate);
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Falha simulada no provedor de pagamento");
-        }
+        simularFalha(request.pedidoId());
 
         PagamentoResponse response = new PagamentoResponse(UUID.randomUUID().toString(), "APROVADO", request.pedidoId(), request.valor());
         log.info("Pagamento aprovado (pedidoId={}, transacaoId={}, valor={})", request.pedidoId(), response.transacaoId(), request.valor());
@@ -79,5 +66,22 @@ public class PagamentoController {
     }
 
     public record PagamentoResponse(String transacaoId, String status, String pedidoId, double valor) {
+    }
+
+    // === Estudo: Simulacao de falhas para testar Circuit Breaker ===
+    private void simularFalha(String pedidoId) {
+        if (delayMs > 0) {
+            log.info("Simulando latencia de pagamento (pedidoId={}, delayMs={})", pedidoId, delayMs);
+            try {
+                Thread.sleep(delayMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Latencia simulada interrompida (pedidoId={})", pedidoId);
+            }
+        }
+        if (ThreadLocalRandom.current().nextDouble() < failRate) {
+            log.warn("Falha simulada no pagamento (pedidoId={}, failRate={})", pedidoId, failRate);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Falha simulada no provedor de pagamento");
+        }
     }
 }

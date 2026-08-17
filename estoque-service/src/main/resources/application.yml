@@ -35,3 +35,9 @@ info:
 logging:
   pattern:
     level: "%5p [%X{traceId:-},%X{spanId:-}]"
+
+# Simulacao de falhas para estudar Circuit Breaker
+# Ajuste esses valores para testar diferentes cenarios
+frete:
+  failRate: 0
+  delayMs: 0
