@@ -8,11 +8,19 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Controller com dados de vendas de exemplo.
+ */
 @RestController
 public class VendaController {
 
     private static final Logger log = LoggerFactory.getLogger(VendaController.class);
 
+    /**
+     * Lista vendas de exemplo (dados estaticos para demonstracao).
+     *
+     * @return lista de vendas de exemplo
+     */
     @GetMapping("/vendas")
     public List<Map<String, Object>> listarVendas() {
         log.info("Listando vendas de exemplo");

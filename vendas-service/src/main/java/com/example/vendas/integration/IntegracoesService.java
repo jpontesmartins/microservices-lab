@@ -30,6 +30,11 @@ public class IntegracoesService {
     /**
      * Reserva estoque no estoque-service.
      * Se o circuit breaker estiver OPEN ou a chamada falhar, aciona o fallback.
+     *
+     * @param pedidoId  identificador do pedido
+     * @param sku       codigo do produto
+     * @param quantidade quantidade a reservar
+     * @return resposta da reserva de estoque
      */
     @CircuitBreaker(name = "estoque", fallbackMethod = "reservaFallback")
     public ReservaResponse reservarEstoque(String pedidoId, String sku, int quantidade) {
@@ -46,10 +51,14 @@ public class IntegracoesService {
 
     /**
      * Fallback acionado quando o circuit breaker do estoque esta OPEN ou a chamada falhou.
-     * Retorna uma resposta com status INDISPONIVEL para que o fluxo continue e possa
+     * Retorna uma resposta com status FALHA_TRANSITORIA para que o fluxo continue e possa
      * tomar uma decisao (ex.: rejeitar o pedido ou tentar novamente).
      *
-     * O objeto Throwable t contem a excecao original que causou a ativacao do fallback.
+     * @param pedidoId  identificador do pedido
+     * @param sku       codigo do produto
+     * @param quantidade quantidade a reservar
+     * @param t         excecao original que causou a ativacao do fallback
+     * @return resposta com status FALHA_TRANSITORIA ou BusinessException se erro de negocio
      */
     @SuppressWarnings("unused")
     public ReservaResponse reservaFallback(String pedidoId, String sku, int quantidade, Throwable t) {
@@ -65,6 +74,12 @@ public class IntegracoesService {
      * Calcula frete no frete-service.
      * Se o circuit breaker estiver OPEN ou a chamada falhar, aciona o fallback.
      * O frete e obrigatorio para prosseguir com o pagamento.
+     *
+     * @param pedidoId   identificador do pedido
+     * @param sku        codigo do produto
+     * @param quantidade quantidade do produto
+     * @param cepDestino CEP de destino para o calculo do frete
+     * @return resposta com o calculo do frete
      */
     @CircuitBreaker(name = "frete", fallbackMethod = "freteFallback")
     public FreteResponse calcularFrete(String pedidoId, String sku, int quantidade, String cepDestino) {
@@ -83,10 +98,15 @@ public class IntegracoesService {
 
     /**
      * Fallback acionado quando o circuit breaker do frete esta OPEN ou a chamada falhou.
-     * Retorna uma resposta com status INDISPONIVEL para que o PedidoCore trate como
+     * Retorna uma resposta com status FALHA_TRANSITORIA para que o PedidoCore trate como
      * falha no calculo de frete.
      *
-     * O frete é critico para o fluxo - sem ele, não é possível calcular o valor total do pedido.
+     * @param pedidoId   identificador do pedido
+     * @param sku        codigo do produto
+     * @param quantidade quantidade do produto
+     * @param cepDestino CEP de destino para o calculo do frete
+     * @param t          excecao original que causou a ativacao do fallback
+     * @return resposta com status FALHA_TRANSITORIA ou BusinessException se erro de negocio
      */
     @SuppressWarnings("unused")
     public FreteResponse freteFallback(String pedidoId, String sku, int quantidade, String cepDestino, Throwable t) {
@@ -101,6 +121,10 @@ public class IntegracoesService {
     /**
      * Processa pagamento no pagamento-service.
      * Se o circuit breaker estiver OPEN ou a chamada falhar, aciona o fallback.
+     *
+     * @param pedidoId identificador do pedido
+     * @param valor    valor total a ser pago (produto + frete)
+     * @return resposta do processamento do pagamento
      */
     @CircuitBreaker(name = "pagamento", fallbackMethod = "pagamentoFallback")
     public PagamentoResponse processarPagamento(String pedidoId, double valor) {
@@ -120,7 +144,10 @@ public class IntegracoesService {
      * Retorna uma resposta com status FALHA_TRANSITORIA para que o fluxo trate como
      * falha de pagamento e acione a compensacao de estoque e frete (se aplicavel).
      *
-     * O Throwable t permite logar a causa real da falha para diagnostico.
+     * @param pedidoId identificador do pedido
+     * @param valor    valor total a ser pago
+     * @param t        excecao original que causou a ativacao do fallback
+     * @return resposta com status FALHA_TRANSITORIA ou BusinessException se erro de negocio
      */
     @SuppressWarnings("unused")
     public PagamentoResponse pagamentoFallback(String pedidoId, double valor, Throwable t) {
@@ -138,8 +165,10 @@ public class IntegracoesService {
 
     /**
      * Cancela uma reserva de estoque de forma best-effort (melhor esforco).
-     * Usado para compensacao quando o pagamento ou o cálculo do frete falham após o estoque ter sido reservado
+     * Usado para compensacao quando o pagamento ou o calculo do frete falham apos o estoque ter sido reservado.
      * Nao propaga excecoes - falha silenciosa e apenas logada.
+     *
+     * @param reservaId identificador da reserva a ser cancelada
      */
     public void cancelarReservaBestEffort(String reservaId) {
         if (reservaId == null || reservaId.isBlank()) {
@@ -156,6 +185,8 @@ public class IntegracoesService {
      * Cancela um frete de forma best-effort (melhor esforco).
      * Usado para compensacao quando o pagamento falha apos o frete ter sido calculado.
      * Nao propaga excecoes - falha silenciosa e apenas logada.
+     *
+     * @param freteId identificador do frete a ser cancelado
      */
     public void cancelarFreteBestEffort(String freteId) {
         if (freteId == null || freteId.isBlank()) {

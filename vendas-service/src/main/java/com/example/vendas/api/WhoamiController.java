@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+/**
+ * Controller para identificacao da instancia do servico.
+ */
 @RestController
 public class WhoamiController {
 
@@ -22,6 +25,11 @@ public class WhoamiController {
     @Value("${server.port}")
     private int port;
 
+    /**
+     * Retorna informacoes da instancia do servico (nome, instanceId, porta).
+     *
+     * @return mapa com os dados da instancia
+     */
     @GetMapping("/vendas/whoami")
     public Map<String, Object> whoami() {
         log.info("Whoami consultado (service={}, instanceId={}, port={})", app, instanceId, port);

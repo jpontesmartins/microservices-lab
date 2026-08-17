@@ -29,6 +29,14 @@ public class PedidoCore {
         this.integracoes = integracoes;
     }
 
+    /**
+     * Cria e processa um novo pedido seguindo o padrao saga com 3 etapas:
+     * reserva de estoque, calculo de frete e processamento de pagamento.
+     * Em caso de falha, executa transacoes compensatorias (best-effort).
+     *
+     * @param request dados do pedido a ser criado
+     * @return resposta do pedido com status e identificadores das integracoes
+     */
     public PedidoResponse criarPedido(CriarPedidoRequest request) {
         validar(request);
 
@@ -133,6 +141,12 @@ public class PedidoCore {
         return state.toResponse();
     }
 
+    /**
+     * Busca um pedido pelo identificador no repositorio em memoria.
+     *
+     * @param pedidoId identificador do pedido
+     * @return resposta do pedido ou null se nao encontrado
+     */
     public PedidoResponse buscar(String pedidoId) {
         log.info("Buscando pedido no repositório em memoria (pedidoId={})", pedidoId);
         PedidoState state = pedidos.get(pedidoId);
@@ -142,6 +156,12 @@ public class PedidoCore {
         return state == null ? null : state.toResponse();
     }
 
+    /**
+     * Valida os dados obrigatorios do request de criacao de pedido.
+     *
+     * @param request dados do pedido a serem validados
+     * @throws IllegalArgumentException se algum campo obrigatorio estiver invalido
+     */
     private static void validar(CriarPedidoRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("Body obrigatorio");

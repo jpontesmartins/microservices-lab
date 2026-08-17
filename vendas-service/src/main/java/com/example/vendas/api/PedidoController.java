@@ -24,6 +24,13 @@ public class PedidoController {
         this.pedidos = pedidos;
     }
 
+    /**
+     * Cria um novo pedido.
+     *
+     * @param request dados do pedido a ser criado
+     * @return resposta do pedido processado
+     * @throws ResponseStatusException BAD_REQUEST se validacao falhar
+     */
     @PostMapping("/vendas/pedidos")
     public PedidoResponse criar(@RequestBody CriarPedidoRequest request) {
         log.info("Recebida requisicao de criacao de pedido (sku={}, quantidade={}, valor={})",
@@ -40,6 +47,13 @@ public class PedidoController {
         }
     }
 
+    /**
+     * Busca um pedido pelo identificador.
+     *
+     * @param pedidoId identificador do pedido
+     * @return resposta do pedido encontrado
+     * @throws ResponseStatusException NOT_FOUND se pedido nao existir
+     */
     @GetMapping("/vendas/pedidos/{pedidoId}")
     public PedidoResponse obter(@PathVariable String pedidoId) {
         log.info("Consulta de pedido recebida (pedidoId={})", pedidoId);
