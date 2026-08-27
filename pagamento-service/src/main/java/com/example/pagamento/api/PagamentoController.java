@@ -14,6 +14,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * Controller REST para operações de pagamento.
+ * Processa pagamentos de pedidos com simulação de falhas para testes de Circuit Breaker.
+ */
 @RestController
 public class PagamentoController {
 
@@ -25,6 +29,11 @@ public class PagamentoController {
     @Value("${pagamento.delayMs:0}")
     private long delayMs;
 
+    /**
+     * Retorna o status do serviço de pagamento (endpoint legado).
+     *
+     * @return mapa com status, mensagem e provedor
+     */
     @GetMapping("/status")
     public Map<String, Object> status() {
         log.info("Status consultado no payment service");
@@ -35,12 +44,24 @@ public class PagamentoController {
         );
     }
 
+    /**
+     * Retorna o status do serviço de pagamento (endpoint com prefixo).
+     *
+     * @return mapa com status, mensagem e provedor
+     */
     @GetMapping("/pagamento/status")
     public Map<String, Object> statusComPrefixo() {
         log.info("Status consultado no endpoint com prefixo /pagamento/status");
         return status();
     }
 
+    /**
+     * Processa um pagamento para um pedido.
+     *
+     * @param request dados do pagamento (pedidoId, valor)
+     * @return resposta do pagamento processado com transacaoId e status
+     * @throws ResponseStatusException BAD_REQUEST se pedidoId ausente ou valor <= 0
+     */
     @PostMapping("/pagamento/pagamentos")
     public PagamentoResponse pagar(@RequestBody PagamentoRequest request) {
         log.info("Requisicao de pagamento recebida (pedidoId={}, valor={})",
@@ -62,13 +83,34 @@ public class PagamentoController {
         return response;
     }
 
+    /**
+     * Request para processamento de pagamento.
+     *
+     * @param pedidoId identificador do pedido
+     * @param valor    valor total a ser pago
+     */
     public record PagamentoRequest(String pedidoId, double valor) {
     }
 
+    /**
+     * Resposta do processamento de pagamento.
+     *
+     * @param transacaoId identificador da transacao
+     * @param status      status do pagamento (APROVADO, FALHA_TRANSITORIA, etc.)
+     * @param pedidoId    identificador do pedido
+     * @param valor       valor processado
+     */
     public record PagamentoResponse(String transacaoId, String status, String pedidoId, double valor) {
     }
 
     // === Estudo: Simulacao de falhas para testar Circuit Breaker ===
+
+    /**
+     * Simula falhas e latência no pagamento para fins de teste de Circuit Breaker.
+     * Usa configuração via application.yml: {@code pagamento.failRate} e {@code pagamento.delayMs}.
+     *
+     * @param pedidoId identificador do pedido (para fins de log)
+     */
     private void simularFalha(String pedidoId) {
         if (delayMs > 0) {
             log.info("Simulando latencia de pagamento (pedidoId={}, delayMs={})", pedidoId, delayMs);

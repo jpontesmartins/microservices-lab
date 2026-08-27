@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 /**
- * Cliente Feign para integracao com o frete-service.
+ * Cliente Feign para integração com o frete-service.
  */
 @FeignClient(name = "frete-service")
 public interface FreteClient {

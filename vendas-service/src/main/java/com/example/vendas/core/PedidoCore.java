@@ -4,8 +4,10 @@ import com.example.vendas.core.dto.CriarPedidoRequest;
 import com.example.vendas.core.dto.PedidoResponse;
 import com.example.vendas.integration.BusinessException;
 import com.example.vendas.integration.IntegracoesService;
+import com.example.vendas.integration.PedidoCriadoProducer;
 import com.example.vendas.integration.dto.FreteResponse;
 import com.example.vendas.integration.dto.PagamentoResponse;
+import com.example.vendas.integration.dto.PedidoCriadoEvent;
 import com.example.vendas.integration.dto.ReservaResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,17 +24,19 @@ public class PedidoCore {
     private static final Logger log = LoggerFactory.getLogger(PedidoCore.class);
 
     private final IntegracoesService integracoes;
+    private final PedidoCriadoProducer pedidoCriadoProducer;
 
     private final Map<String, PedidoState> pedidos = new ConcurrentHashMap<>();
 
-    public PedidoCore(IntegracoesService integracoes) {
+    public PedidoCore(IntegracoesService integracoes, PedidoCriadoProducer pedidoCriadoProducer) {
         this.integracoes = integracoes;
+        this.pedidoCriadoProducer = pedidoCriadoProducer;
     }
 
     /**
-     * Cria e processa um novo pedido seguindo o padrao saga com 3 etapas:
-     * reserva de estoque, calculo de frete e processamento de pagamento.
-     * Em caso de falha, executa transacoes compensatorias (best-effort).
+     * Cria e processa um novo pedido seguindo o padrão saga com 3 etapas:
+     * reserva de estoque, cálculo de frete e processamento de pagamento.
+     * Em caso de falha, executa transações compensatórias (best-effort).
      *
      * @param request dados do pedido a ser criado
      * @return resposta do pedido com status e identificadores das integracoes
@@ -138,6 +142,11 @@ public class PedidoCore {
         state.status = "PAGO";
         log.info("Pagamento aprovado e pedido finalizado (pedidoId={}, reservaId={}, freteId={}, transacaoId={}, valorTotal={}, status={})",
                 pedidoId, state.reservaId, state.freteId, state.transacaoId, valorTotal, state.status);
+
+        // === Publicar evento PedidoCriado no Kafka ===
+        PedidoCriadoEvent event = new PedidoCriadoEvent(pedidoId, request.sku(), request.quantidade(), valorTotal, request.cepDestino());
+        pedidoCriadoProducer.publish(event);
+
         return state.toResponse();
     }
 
@@ -157,10 +166,10 @@ public class PedidoCore {
     }
 
     /**
-     * Valida os dados obrigatorios do request de criacao de pedido.
+     * Valida os dados obrigatórios do request de criação de pedido.
      *
      * @param request dados do pedido a serem validados
-     * @throws IllegalArgumentException se algum campo obrigatorio estiver invalido
+     * @throws IllegalArgumentException se algum campo obrigatório estiver inválido
      */
     private static void validar(CriarPedidoRequest request) {
         if (request == null) {

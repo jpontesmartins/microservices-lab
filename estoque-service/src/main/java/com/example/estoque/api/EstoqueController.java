@@ -17,6 +17,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+/**
+ * Controller REST para operações de estoque.
+ * Endpoints para listagem, reserva e cancelamento de itens em estoque.
+ */
 @RestController
 public class EstoqueController {
 
@@ -24,10 +28,20 @@ public class EstoqueController {
 
     private final EstoqueCore estoque;
 
+    /**
+     * Construtor com injecao de dependencia do nucleo de estoque.
+     *
+     * @param estoque nucleo de logica de estoque
+     */
     public EstoqueController(EstoqueCore estoque) {
         this.estoque = estoque;
     }
 
+    /**
+     * Lista todos os itens em estoque (endpoint legado sem prefixo).
+     *
+     * @return lista de itens em estoque
+     */
     @GetMapping("/itens")
     public List<ItemEstoqueResponse> listarItens() {
         // Mantemos /itens por compatibilidade, mas o caminho recomendado via gateway e /estoque/itens.
@@ -37,6 +51,11 @@ public class EstoqueController {
         return itens;
     }
 
+    /**
+     * Lista todos os itens em estoque (endpoint recomendado com prefixo).
+     *
+     * @return lista de itens em estoque
+     */
     @GetMapping("/estoque/itens")
     public List<ItemEstoqueResponse> listarItensComPrefixo() {
         log.info("Listagem de itens recebida no endpoint /estoque/itens");
@@ -45,6 +64,13 @@ public class EstoqueController {
         return itens;
     }
 
+    /**
+     * Cria uma nova reserva de estoque para um pedido.
+     *
+     * @param request dados da reserva (pedidoId, sku, quantidade)
+     * @return resposta da reserva criada
+     * @throws ResponseStatusException BAD_REQUEST se validação falhar, CONFLICT se estoque insuficiente
+     */
     @PostMapping("/estoque/reservas")
     public ReservaResponse reservar(@RequestBody ReservaRequest request) {
         log.info("Solicitacao de reserva recebida (pedidoId={}, sku={}, quantidade={})",
@@ -65,6 +91,12 @@ public class EstoqueController {
         }
     }
 
+    /**
+     * Cancela uma reserva de estoque existente.
+     *
+     * @param reservaId identificador da reserva a ser cancelada
+     * @throws ResponseStatusException NOT_FOUND se reserva nao existir
+     */
     @DeleteMapping("/estoque/reservas/{reservaId}")
     public void cancelarReserva(@PathVariable String reservaId) {
         log.info("Solicitacao de cancelamento de reserva recebida (reservaId={})", reservaId);

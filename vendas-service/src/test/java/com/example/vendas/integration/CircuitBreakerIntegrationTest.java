@@ -15,12 +15,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Testes de integracao completos: Resilience4j + Feign + LoadBalancer.
+ * Testes de integração completos: Resilience4j + Feign + LoadBalancer.
  * Valida o comportamento real do @CircuitBreaker com o contexto Spring.
  *
- * Os Feign clients reais sao usados, mas como os servicos nao estao rodando,
- * as chamadas falham com erros de conexao. O circuit breaker detecta essas
- * falhas e aciona os fallbacks automaticamente.
+ * <p>Os Feign clients reais são usados, mas como os serviços não estão rodando,
+ * as chamadas falham com erros de conexão. O circuit breaker detecta essas
+ * falhas e aciona os fallbacks automaticamente.</p>
  */
 @SpringBootTest
 class CircuitBreakerIntegrationTest {
@@ -31,6 +31,9 @@ class CircuitBreakerIntegrationTest {
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
+    /**
+     * Reseta todos os circuit breakers antes de cada teste.
+     */
     @BeforeEach
     void setUp() {
         circuitBreakerRegistry.getAllCircuitBreakers()
@@ -45,12 +48,12 @@ class CircuitBreakerIntegrationTest {
          * A falha e implicita: nenhum mock e configurado.
          * O Feign client tenta conectar via LoadBalancer, mas como Eureka esta
          * desabilitado no application.yml de teste (eureka.client.enabled=false)
-         * e nenhum servico esta registrado, o RoundRobinLoadBalancer lança
+         * e nenhum serviço está registrado, o RoundRobinLoadBalancer lança
          * IllegalStateException -> ServiceUnavailable. O @CircuitBreaker pega
          * essa excecao e invoca o fallback automaticamente.
          */
         @Test
-        @DisplayName("deve acionar fallback quando estoque-service nao esta disponivel")
+        @DisplayName("deve acionar fallback quando estoque-service não está disponível")
         void deveAcionarFallbackQuandoEstoqueServiceNaoEstaDisponivel() {
             ReservaResponse result = integracoesService.reservarEstoque(
                     "pedido-001", "SKU-ABC", 2);
@@ -62,12 +65,12 @@ class CircuitBreakerIntegrationTest {
 
         /**
          * A falha e implicita: a cadeia Feign -> LoadBalancer -> ServiceUnavailable
-         * falha a cada chamada porque os servicos nao estao registrados no Eureka.
+         * falha a cada chamada porque os serviços não estão registrados no Eureka.
          * Apos 5 chamadas (minimumNumberOfCalls) com 100% de falha (acima de 50%),
          * o circuit breaker transiciona para OPEN.
          */
         @Test
-        @DisplayName("deve abrir circuit breaker apos 5 falhas consecutivas")
+        @DisplayName("deve abrir circuit breaker após 5 falhas consecutivas")
         void deveAbrirCircuitBreakerApos5FalhasConsecutivas() {
             for (int i = 0; i < 5; i++) {
                 ReservaResponse result = integracoesService.reservarEstoque(
@@ -81,11 +84,11 @@ class CircuitBreakerIntegrationTest {
 
         /**
          * Com o circuit breaker em estado OPEN, qualquer chamada e bloqueada
-         * imediatamente (CallNotPermittedException) sem tentar conectar ao servico.
+         * imediatamente (CallNotPermittedException) sem tentar conectar ao serviço.
          * O fallback e acionado instantaneamente.
          */
         @Test
-        @DisplayName("deve retornar fallback imediato quando circuit breaker esta OPEN")
+        @DisplayName("deve retornar fallback imediato quando circuit breaker está OPEN")
         void deveRetornarFallbackImediatoQuandoCircuitBreakerEstaOpen() {
             for (int i = 0; i < 5; i++) {
                 integracoesService.reservarEstoque("pedido-" + i, "SKU-ABC", 2);
@@ -110,11 +113,11 @@ class CircuitBreakerIntegrationTest {
     class FreteCircuitBreakerTests {
 
         /**
-         * Mesmo mecanismo do estoque: LoadBalancer nao encontra servicos registrados,
+         * Mesmo mecanismo do estoque: LoadBalancer não encontra serviços registrados,
          * lança ServiceUnavailable, e o @CircuitBreaker invoca o fallback.
          */
         @Test
-        @DisplayName("deve acionar fallback quando frete-service nao esta disponivel")
+        @DisplayName("deve acionar fallback quando frete-service não está disponível")
         void deveAcionarFallbackQuandoFreteServiceNaoEstaDisponivel() {
             FreteResponse result = integracoesService.calcularFrete(
                     "pedido-001", "SKU-ABC", 2, "01310-100");
@@ -126,10 +129,10 @@ class CircuitBreakerIntegrationTest {
         }
 
         /**
-         * Mesma logica do estoque: 5 falhas implicitas (servicos offline) abrem o circuit breaker.
+         * Mesma lógica do estoque: 5 falhas implícitas (serviços offline) abrem o circuit breaker.
          */
         @Test
-        @DisplayName("deve abrir circuit breaker de frete apos 5 falhas consecutivas")
+        @DisplayName("deve abrir circuit breaker de frete após 5 falhas consecutivas")
         void deveAbrirCircuitBreakerDeFreteApos5FalhasConsecutivas() {
             for (int i = 0; i < 5; i++) {
                 FreteResponse result = integracoesService.calcularFrete(
@@ -147,11 +150,11 @@ class CircuitBreakerIntegrationTest {
     class PagamentoCircuitBreakerTests {
 
         /**
-         * Mesmo mecanismo: LoadBalancer sem servicos registrados -> ServiceUnavailable -> fallback.
+         * Mesmo mecanismo: LoadBalancer sem serviços registrados -> ServiceUnavailable -> fallback.
          * O pagamento retorna status FALHA_TRANSITORIA (diferente de INDISPONIVEL dos outros).
          */
         @Test
-        @DisplayName("deve acionar fallback quando pagamento-service nao esta disponivel")
+        @DisplayName("deve acionar fallback quando pagamento-service não está disponível")
         void deveAcionarFallbackQuandoPagamentoServiceNaoEstaDisponivel() {
             PagamentoResponse result = integracoesService.processarPagamento(
                     "pedido-001", 140.50);
@@ -162,10 +165,10 @@ class CircuitBreakerIntegrationTest {
         }
 
         /**
-         * Mesma logica: 5 falhas implicitas (servicos offline) abrem o circuit breaker de pagamento.
+         * Mesma lógica: 5 falhas implícitas (serviços offline) abrem o circuit breaker de pagamento.
          */
         @Test
-        @DisplayName("deve abrir circuit breaker de pagamento apos 5 falhas consecutivas")
+        @DisplayName("deve abrir circuit breaker de pagamento após 5 falhas consecutivas")
         void deveAbrirCircuitBreakerDePagamentoApos5FalhasConsecutivas() {
             for (int i = 0; i < 5; i++) {
                 PagamentoResponse result = integracoesService.processarPagamento(

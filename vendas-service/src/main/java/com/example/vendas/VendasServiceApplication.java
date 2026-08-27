@@ -5,12 +5,18 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 /**
- * Classe principal do microservico de vendas.
- * Configura o Spring Boot e habilita os clientes Feign para integracao com servicos externos.
+ * Classe principal do microserviço de vendas.
+ * Configura o Spring Boot e habilita os clientes Feign para integração com serviços externos.
  */
 @SpringBootApplication
 @EnableFeignClients
 public class VendasServiceApplication {
+
+    /**
+     * Ponto de entrada da aplicacao.
+     *
+     * @param args argumentos de linha de comando
+     */
     public static void main(String[] args) {
         SpringApplication.run(VendasServiceApplication.class, args);
     }

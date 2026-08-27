@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 /**
- * Cliente Feign para integracao com o estoque-service.
+ * Cliente Feign para integração com o estoque-service.
  */
 @FeignClient(name = "estoque-service")
 public interface EstoqueClient {

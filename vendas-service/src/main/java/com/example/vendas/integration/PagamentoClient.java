@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 /**
- * Cliente Feign para integracao com o pagamento-service.
+ * Cliente Feign para integração com o pagamento-service.
  */
 @FeignClient(name = "pagamento-service")
 public interface PagamentoClient {

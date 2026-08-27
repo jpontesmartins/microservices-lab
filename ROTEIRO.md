@@ -3,15 +3,44 @@
 ## Arquitetura
 
 ```
-Cliente → API Gateway (:8080) → vendas-service (:8081)
+Cliente -> API Gateway (:8080) -> vendas-service (:8081)
                                     ├── estoque-service (:8082)
                                     ├── frete-service (:8084)
                                     └── pagamento-service (:8083)
 
+                                    ┌─ transportadora-service (:8085)  [consumer]
+              Kafka (:9092) ────────┤
+                                    └─ notificação-service (:8086)   [consumer]
+
 Todos se registram no discovery-server (Eureka) (:8761)
 ```
 
+**Mensageria:** Apache Kafka (:9092) com Zookeeper (:2181)
 **Observabilidade:** Prometheus (:9090) | Grafana (:3000) | Zipkin (:9411)
+
+### Pub/Sub com Kafka
+
+O padrão **Pub/Sub** (Publicar/Subscrever) é implementado via Apache Kafka:
+
+```
+vendas-service (Producer)
+       │
+       ▼
+   Kafka Broker
+   Topic: pedido-criado
+       │
+       ├──► transportadora-service (Consumer - group: transportadora-group)
+       │      "Pedido sendo processado pela transportadora"
+       │
+        └──► notificação-service (Consumer - group: notificacao-group)
+               "Notificação enviada ao usuário"
+```
+
+**Fluxo:**
+1. `vendas-service` cria e paga um pedido
+2. Após pagamento aprovado, publica evento `PedidoCriado` na topic `pedido-criado`
+3. `transportadora-service` e `notificação-service` consomem a mensagem independentemente
+4. Cada serviço processa em seu grupo de consumo (group-id), garantindo que apenas um consumer por grupo receba cada mensagem
 
 ---
 
@@ -32,6 +61,8 @@ cd vendas-service && mvn test && cd ..
 cd estoque-service && mvn test && cd ..
 cd frete-service && mvn test && cd ..
 cd pagamento-service && mvn test && cd ..
+cd transportadora-service && mvn test && cd ..
+cd notificacao-service && mvn test && cd ..
 ```
 
 ---
@@ -72,6 +103,10 @@ Serviços esperados:
 | estoque-service | 8082 |
 | pagamento-service | 8083 |
 | frete-service | 8084 |
+| transportadora-service | 8085 |
+| notificação-service | 8086 |
+| zookeeper | 2181 |
+| kafka | 9092 |
 
 ---
 
@@ -80,7 +115,7 @@ Serviços esperados:
 Acesse o dashboard do Eureka:
 - http://localhost:8761
 
-Deve listar: `API-GATEWAY`, `VENDAS-SERVICE`, `ESTOQUE-SERVICE`, `PAGAMENTO-SERVICE`, `FRETE-SERVICE`
+Deve listar: `API-GATEWAY`, `VENDAS-SERVICE`, `ESTOQUE-SERVICE`, `PAGAMENTO-SERVICE`, `FRETE-SERVICE`, `TRANSPORTADORA-SERVICE`, `NOTIFICACAO-SERVICE`
 
 ---
 
@@ -98,6 +133,12 @@ curl http://localhost:8080/whoami/pagamento
 
 # Frete
 curl http://localhost:8080/whoami/frete
+
+# Transportadora
+curl http://localhost:8080/whoami/transportadora
+
+# Notificação
+curl http://localhost:8080/whoami/notificação
 ```
 
 Cada resposta deve retornar `{service, instanceId, port}`.
@@ -302,6 +343,39 @@ cd observability && docker compose -f observability.yml down
 
 ---
 
+## Passo 16 - Testar Kafka Pub/Sub
+
+### 16.1 - Verificar que o Kafka está rodando
+
+```bash
+docker compose ps kafka
+```
+
+### 16.2 - Criar um pedido e observar os logs
+
+```bash
+curl -X POST http://localhost:8080/vendas/pedidos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sku": "ABC-123",
+    "quantidade": 1,
+    "valor": 199.90,
+    "cepDestino": "01310-100"
+  }'
+```
+
+### 16.3 - Verificar logs dos consumers
+
+```bash
+# Transportadora - deve mostrar "Pedido sendo processado pela transportadora"
+docker compose logs transportadora-service
+
+# Notificação - deve mostrar "Notificação enviada ao usuário"
+docker compose logs notificacao-service
+```
+
+---
+
 ## Mapa de Portas
 
 | Serviço | Porta |
@@ -312,6 +386,10 @@ cd observability && docker compose -f observability.yml down
 | estoque-service | 8082 |
 | pagamento-service | 8083 |
 | frete-service | 8084 |
+| transportadora-service | 8085 |
+| notificacao-service | 8086 |
+| Zookeeper | 2181 |
+| Kafka | 9092 |
 | Prometheus | 9090 |
 | Grafana | 3000 |
 | Zipkin | 9411 |

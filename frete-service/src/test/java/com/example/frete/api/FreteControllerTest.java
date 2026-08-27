@@ -19,6 +19,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+/**
+ * Testes unitários do {@link FreteController}.
+ * Valida cálculo de frete, cancelamento e validação de dados.
+ */
 @ExtendWith(MockitoExtension.class)
 class FreteControllerTest {
 
@@ -30,6 +34,9 @@ class FreteControllerTest {
 
     private FreteResponse freteResponse;
 
+    /**
+     * Configura o ambiente de teste com uma resposta de frete padrao.
+     */
     @BeforeEach
     void setUp() {
         freteResponse = new FreteResponse("frete-001", "CALCULADO", "pedido-001", 20.0, "3 dias uteis");

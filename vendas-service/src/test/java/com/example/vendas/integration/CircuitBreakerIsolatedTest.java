@@ -28,6 +28,9 @@ class CircuitBreakerIsolatedTest {
     private CircuitBreakerConfig config;
     private CircuitBreakerRegistry registry;
 
+    /**
+     * Configura o circuit breaker com parâmetros de teste.
+     */
     @BeforeEach
     void setUp() {
         config = CircuitBreakerConfig.custom()
@@ -58,7 +61,7 @@ class CircuitBreakerIsolatedTest {
         }
 
         @Test
-        @DisplayName("deve transicionar para OPEN apos 5 falhas (minimumNumberOfCalls)")
+        @DisplayName("deve transicionar para OPEN após 5 falhas (minimumNumberOfCalls)")
         void deveTransicionarParaOpenApos5Falhas() {
             CircuitBreaker cb = registry.circuitBreaker("teste-open");
 
@@ -143,11 +146,11 @@ class CircuitBreakerIsolatedTest {
     }
 
     @Nested
-    @DisplayName("Fallback quando circuit breaker esta OPEN")
+    @DisplayName("Fallback quando circuit breaker está OPEN")
     class FallbackTests {
 
         @Test
-        @DisplayName("deve acionar fallback de estoque quando circuit breaker esta OPEN")
+        @DisplayName("deve acionar fallback de estoque quando circuit breaker está OPEN")
         void deveAcionarFallbackDeEstoqueQuandoCircuitBreakerEstaOpen() {
             CircuitBreaker cb = registry.circuitBreaker("teste-fallback-estoque");
 
@@ -168,7 +171,7 @@ class CircuitBreakerIsolatedTest {
         }
 
         @Test
-        @DisplayName("deve acionar fallback de frete quando circuit breaker esta OPEN")
+        @DisplayName("deve acionar fallback de frete quando circuit breaker está OPEN")
         void deveAcionarFallbackDeFreteQuandoCircuitBreakerEstaOpen() {
             CircuitBreaker cb = registry.circuitBreaker("teste-fallback-frete");
 
@@ -189,7 +192,7 @@ class CircuitBreakerIsolatedTest {
         }
 
         @Test
-        @DisplayName("deve acionar fallback de pagamento quando circuit breaker esta OPEN")
+        @DisplayName("deve acionar fallback de pagamento quando circuit breaker está OPEN")
         void deveAcionarFallbackDePagamentoQuandoCircuitBreakerEstaOpen() {
             CircuitBreaker cb = registry.circuitBreaker("teste-fallback-pagamento");
 
@@ -215,7 +218,7 @@ class CircuitBreakerIsolatedTest {
     class RecoveryTests {
 
         @Test
-        @DisplayName("deve transicionar de OPEN para HALF_OPEN apos waitDuration e aceitar chamadas")
+        @DisplayName("deve transicionar de OPEN para HALF_OPEN após waitDuration e aceitar chamadas")
         void deveTransicionarParaHalfOpenEPermitirChamadas() throws InterruptedException {
             CircuitBreakerConfig shortWaitConfig = CircuitBreakerConfig.custom()
                     .slidingWindowType(CircuitBreakerConfig.SlidingWindowType.COUNT_BASED)

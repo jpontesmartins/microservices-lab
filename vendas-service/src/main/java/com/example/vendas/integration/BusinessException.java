@@ -1,8 +1,8 @@
 package com.example.vendas.integration;
 
 /**
- * Excecao para erros de negocio (respostas HTTP 4xx dos servicos integrados).
- * Utilizada nos fallbacks dos circuit breakers para propagar erros que nao sao transitórios.
+ * Exceção para erros de negócio (respostas HTTP 4xx dos serviços integrados).
+ * Utilizada nos fallbacks dos circuit breakers para propagar erros que não são transitórios.
  */
 public class BusinessException extends RuntimeException {
 
@@ -11,8 +11,8 @@ public class BusinessException extends RuntimeException {
     /**
      * Cria uma nova BusinessException.
      *
-     * @param status codigo do status de erro de negocio
-     * @param cause  excecao original que causou o erro
+     * @param status código do status de erro de negócio
+     * @param cause  exceção original que causou o erro
      */
     public BusinessException(String status, Throwable cause) {
         super("Erro de negocio: " + status, cause);
@@ -20,7 +20,7 @@ public class BusinessException extends RuntimeException {
     }
 
     /**
-     * Retorna o codigo do status de erro de negocio.
+     * Retorna o código do status de erro de negócio.
      *
      * @return codigo do status
      */

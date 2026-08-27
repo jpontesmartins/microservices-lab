@@ -1,7 +1,7 @@
 {
 	"info": {
 		"name": "Microservices - ROTEIRO de Testes",
-		"description": "Coleção gerada a partir do ROTEIRO.md. Contém todos os endpoints para cada passo de teste do ecossistema de microservices.",
+		"description": "Colecao gerada a partir do ROTEIRO.md. Contém todos os endpoints para cada passo de teste do ecossistema de microservices. Padroes estudados: Service Discovery (Eureka), API Gateway, Saga (Orquestracao), Circuit Breaker (Resilience4j), Event-Driven (Kafka), Load Balancing (Spring Cloud LoadBalancer), Compensating Transactions.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -79,6 +79,22 @@
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/frete",
 						"description": "Retorna {service, instanceId, port} do frete-service"
+					}
+				},
+				{
+					"name": "Whoami - Transportadora",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/transportadora",
+						"description": "Retorna {service, instanceId, port} do transportadora-service"
+					}
+				},
+				{
+					"name": "Whoami - Notificacao",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/notificacao",
+						"description": "Retorna {service, instanceId, port} do notificacao-service"
 					}
 				}
 			]
@@ -295,6 +311,30 @@
 					}
 				},
 				{
+					"name": "Prometheus - Métricas estoque-service",
+					"request": {
+						"method": "GET",
+						"url": "{{estoqueUrl}}/actuator/prometheus",
+						"description": "Métricas no formato Prometheus do estoque-service"
+					}
+				},
+				{
+					"name": "Prometheus - Métricas pagamento-service",
+					"request": {
+						"method": "GET",
+						"url": "{{pagamentoUrl}}/actuator/prometheus",
+						"description": "Métricas no formato Prometheus do pagamento-service"
+					}
+				},
+				{
+					"name": "Prometheus - Métricas frete-service",
+					"request": {
+						"method": "GET",
+						"url": "{{freteUrl}}/actuator/prometheus",
+						"description": "Métricas no formato Prometheus do frete-service"
+					}
+				},
+				{
 					"name": "Grafana",
 					"request": {
 						"method": "GET",
@@ -346,6 +386,22 @@
 						"url": "{{baseUrl}}/whoami/frete",
 						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de frete."
 					}
+				},
+				{
+					"name": "Whoami Transportadora (round-robin)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/transportadora",
+						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de transportadora."
+					}
+				},
+				{
+					"name": "Whoami Notificacao (round-robin)",
+					"request": {
+						"method": "GET",
+						"url": "{{baseUrl}}/whoami/notificacao",
+						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de notificação."
+					}
 				}
 			]
 		},
@@ -390,6 +446,61 @@
 						"method": "GET",
 						"url": "{{freteUrl}}/actuator/health",
 						"description": "Verifica a saúde do frete-service"
+					}
+				},
+				{
+					"name": "Health - transportadora-service",
+					"request": {
+						"method": "GET",
+						"url": "http://localhost:8085/actuator/health",
+						"description": "Verifica a saúde do transportadora-service"
+					}
+				},
+				{
+					"name": "Health - notificacao-service",
+					"request": {
+						"method": "GET",
+						"url": "http://localhost:8086/actuator/health",
+						"description": "Verifica a saúde do notificacao-service"
+					}
+				}
+			]
+		},
+		{
+			"name": "Passo 16 - Kafka Pub/Sub",
+			"item": [
+				{
+					"name": "Criar Pedido (para pub no Kafka)",
+					"request": {
+						"method": "POST",
+						"url": "{{baseUrl}}/vendas/pedidos",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"ABC-123\",\n  \"quantidade\": 1,\n  \"valor\": 199.90,\n  \"cepDestino\": \"01310-100\"\n}"
+						},
+						"description": "Após pagamento aprovado, vendas-service publica evento PedidoCriado no Kafka. Verifique os logs de transportadora-service e notificacao-service."
+					}
+				},
+				{
+					"name": "Logs - Transportadora",
+					"request": {
+						"method": "GET",
+						"url": "http://localhost:8085/actuator/health",
+						"description": "Verifique com: docker compose logs transportadora-service. Deve mostrar 'Pedido sendo processado pela transportadora'."
+					}
+				},
+				{
+					"name": "Logs - Notificacao",
+					"request": {
+						"method": "GET",
+						"url": "http://localhost:8086/actuator/health",
+						"description": "Verifique com: docker compose logs notificacao-service. Deve mostrar 'Notificação enviada ao usuário'."
 					}
 				}
 			]

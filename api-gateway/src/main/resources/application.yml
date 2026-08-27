@@ -24,6 +24,14 @@ spring:
           uri: lb://frete-service
           predicates:
             - Path=/frete/**
+        - id: transportadora-service
+          uri: lb://transportadora-service
+          predicates:
+            - Path=/transportadora/**
+        - id: notificacao-service
+          uri: lb://notificacao-service
+          predicates:
+            - Path=/notificacao/**
         - id: whoami-vendas
           uri: lb://vendas-service
           predicates:
@@ -48,6 +56,18 @@ spring:
             - Path=/whoami/frete
           filters:
             - SetPath=/frete/whoami
+        - id: whoami-transportadora
+          uri: lb://transportadora-service
+          predicates:
+            - Path=/whoami/transportadora
+          filters:
+            - SetPath=/transportadora/whoami
+        - id: whoami-notificacao
+          uri: lb://notificacao-service
+          predicates:
+            - Path=/whoami/notificacao
+          filters:
+            - SetPath=/notificacao/whoami
 management:
   zipkin:
     tracing:

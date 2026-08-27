@@ -13,6 +13,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Núcleo de lógica de negócio do serviço de estoque.
+ * Gerencia itens em estoque e operações de reserva/cancelamento usando armazenamento em memória.
+ */
 @Service
 public class EstoqueCore {
 
@@ -21,12 +25,20 @@ public class EstoqueCore {
     private final Map<String, Item> itens = new ConcurrentHashMap<>();
     private final Map<String, Reserva> reservas = new ConcurrentHashMap<>();
 
+    /**
+     * Construtor que inicializa o estoque com dados seed para o lab.
+     */
     public EstoqueCore() {
         // Seed de estoque para o lab.
         itens.put("ABC-123", new Item("ABC-123", "Teclado Mecanico", 42));
         itens.put("XYZ-789", new Item("XYZ-789", "Mouse Gamer", 15));
     }
 
+    /**
+     * Lista todos os itens disponiveis em estoque.
+     *
+     * @return lista de itens com SKU, descricao e quantidade disponivel
+     */
     public List<ItemEstoqueResponse> listarItens() {
         log.info("Montando lista de itens em estoque");
         List<ItemEstoqueResponse> out = new ArrayList<>();
@@ -37,6 +49,15 @@ public class EstoqueCore {
         return out;
     }
 
+    /**
+     * Cria uma reserva de estoque para um pedido.
+     * Valida os dados, verifica disponibilidade e decrementa a quantidade atomicamente.
+     *
+     * @param request dados da reserva (pedidoId, sku, quantidade)
+     * @return resposta da reserva criada com identificador unico
+     * @throws IllegalArgumentException se request for invalido ou SKU desconhecido
+     * @throws IllegalStateException se estoque insuficiente
+     */
     public ReservaResponse reservar(ReservaRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("Request nao pode ser null");
@@ -76,6 +97,12 @@ public class EstoqueCore {
         return new ReservaResponse(reservaId, "RESERVADO", sku, request.quantidade(), request.pedidoId());
     }
 
+    /**
+     * Cancela uma reserva de estoque existente e restaura a quantidade disponivel.
+     *
+     * @param reservaId identificador da reserva a ser cancelada
+     * @return {@code true} se a reserva foi cancelada com sucesso, {@code false} se nao encontrada
+     */
     public boolean cancelarReserva(String reservaId) {
         log.info("Tentando cancelar reserva (reservaId={})", reservaId);
         Reserva reserva = reservas.remove(reservaId);
@@ -96,36 +123,79 @@ public class EstoqueCore {
         return true;
     }
 
+    /**
+     * Registro interno de uma reserva de estoque.
+     *
+     * @param id         identificador da reserva
+     * @param sku        codigo do produto
+     * @param quantidade quantidade reservada
+     * @param pedidoId   identificador do pedido
+     */
     private record Reserva(String id, String sku, int quantidade, String pedidoId) {
     }
 
+    /**
+     * Item de estoque com controle de quantidade.
+     */
     private static final class Item {
         private final String sku;
         private final String descricao;
         private int quantidade;
 
+        /**
+         * Construtor do item de estoque.
+         *
+         * @param sku        codigo do produto
+         * @param descricao  descricao do produto
+         * @param quantidade quantidade disponivel
+         */
         private Item(String sku, String descricao, int quantidade) {
             this.sku = sku;
             this.descricao = descricao;
             this.quantidade = quantidade;
         }
 
+        /**
+         * Retorna o SKU do item.
+         *
+         * @return codigo do produto
+         */
         private String sku() {
             return sku;
         }
 
+        /**
+         * Retorna a descricao do item.
+         *
+         * @return descricao do produto
+         */
         private String descricao() {
             return descricao;
         }
 
+        /**
+         * Retorna a quantidade disponivel do item.
+         *
+         * @return quantidade em estoque
+         */
         private int quantidade() {
             return quantidade;
         }
 
+        /**
+         * Decrementa a quantidade disponivel do item.
+         *
+         * @param q quantidade a decrementar
+         */
         private void decrementar(int q) {
             this.quantidade -= q;
         }
 
+        /**
+         * Incrementa a quantidade disponivel do item.
+         *
+         * @param q quantidade a incrementar
+         */
         private void incrementar(int q) {
             this.quantidade += q;
         }

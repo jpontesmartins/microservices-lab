@@ -13,10 +13,17 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Testes unitários do {@link EstoqueCore}.
+ * Valida operações de listagem, reserva e cancelamento de estoque.
+ */
 class EstoqueCoreTest {
 
     private EstoqueCore estoqueCore;
 
+    /**
+     * Configura o ambiente de teste com uma nova instancia de EstoqueCore.
+     */
     @BeforeEach
     void setUp() {
         estoqueCore = new EstoqueCore();
@@ -73,7 +80,7 @@ class EstoqueCoreTest {
         }
 
         @Test
-        @DisplayName("deve decrementar estoque apos reserva")
+        @DisplayName("deve decrementar estoque após reserva")
         void deveDecrementarEstoqueAposReserva() {
             ReservaRequest request = new ReservaRequest("pedido-001", "ABC-123", 10);
 

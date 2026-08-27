@@ -50,7 +50,7 @@ public class IntegracoesService {
     }
 
     /**
-     * Fallback acionado quando o circuit breaker do estoque esta OPEN ou a chamada falhou.
+     * Fallback acionado quando o circuit breaker do estoque está OPEN ou a chamada falhou.
      * Retorna uma resposta com status FALHA_TRANSITORIA para que o fluxo continue e possa
      * tomar uma decisao (ex.: rejeitar o pedido ou tentar novamente).
      *
@@ -97,7 +97,7 @@ public class IntegracoesService {
     }
 
     /**
-     * Fallback acionado quando o circuit breaker do frete esta OPEN ou a chamada falhou.
+     * Fallback acionado quando o circuit breaker do frete está OPEN ou a chamada falhou.
      * Retorna uma resposta com status FALHA_TRANSITORIA para que o PedidoCore trate como
      * falha no calculo de frete.
      *
@@ -140,7 +140,7 @@ public class IntegracoesService {
     }
 
     /**
-     * Fallback acionado quando o circuit breaker do pagamento esta OPEN ou a chamada falhou.
+     * Fallback acionado quando o circuit breaker do pagamento está OPEN ou a chamada falhou.
      * Retorna uma resposta com status FALHA_TRANSITORIA para que o fluxo trate como
      * falha de pagamento e acione a compensacao de estoque e frete (se aplicavel).
      *
@@ -159,14 +159,20 @@ public class IntegracoesService {
         return new PagamentoResponse(null, "FALHA_TRANSITORIA", pedidoId, valor);
     }
 
+    /**
+     * Verifica se a exceção é um erro de negócio (resposta HTTP 4xx do downstream).
+     *
+     * @param t excecao a ser verificada
+     * @return {@code true} se for um FeignException com status 4xx, {@code false} caso contrário
+     */
     private static boolean isBusinessError(Throwable t) {
         return t instanceof FeignException fe && fe.status() >= 400 && fe.status() < 500;
     }
 
     /**
-     * Cancela uma reserva de estoque de forma best-effort (melhor esforco).
-     * Usado para compensacao quando o pagamento ou o calculo do frete falham apos o estoque ter sido reservado.
-     * Nao propaga excecoes - falha silenciosa e apenas logada.
+     * Cancela uma reserva de estoque de forma best-effort (melhor esforço).
+     * Usado para compensação quando o pagamento ou o cálculo do frete falham após o estoque ter sido reservado.
+     * Não propaga exceções - falha silenciosa e apenas logada.
      *
      * @param reservaId identificador da reserva a ser cancelada
      */
@@ -182,9 +188,9 @@ public class IntegracoesService {
     }
 
     /**
-     * Cancela um frete de forma best-effort (melhor esforco).
-     * Usado para compensacao quando o pagamento falha apos o frete ter sido calculado.
-     * Nao propaga excecoes - falha silenciosa e apenas logada.
+     * Cancela um frete de forma best-effort (melhor esforço).
+     * Usado para compensação quando o pagamento falha após o frete ter sido calculado.
+     * Não propaga exceções - falha silenciosa e apenas logada.
      *
      * @param freteId identificador do frete a ser cancelado
      */

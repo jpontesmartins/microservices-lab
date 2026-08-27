@@ -1,12 +1,12 @@
 package com.example.vendas.integration.dto;
 
 /**
- * Request para calculo de frete no frete-service.
+ * Request para cálculo de frete no frete-service.
  *
  * @param pedidoId   identificador do pedido
- * @param sku        codigo do produto
+ * @param sku        código do produto
  * @param quantidade quantidade do produto
- * @param cepDestino CEP de destino para o calculo
+ * @param cepDestino CEP de destino para o cálculo
  */
 public record FreteRequest(String pedidoId, String sku, int quantidade, String cepDestino) {
 }

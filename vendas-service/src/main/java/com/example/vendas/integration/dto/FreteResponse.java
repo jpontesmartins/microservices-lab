@@ -1,10 +1,10 @@
 package com.example.vendas.integration.dto;
 
 /**
- * Resposta do calculo de frete no frete-service.
+ * Resposta do cálculo de frete no frete-service.
  *
  * @param freteId     identificador do frete
- * @param status      status do calculo (CALCULADO, FALHA_TRANSATORIA, etc.)
+ * @param status      status do cálculo (CALCULADO, FALHA_TRANSITÓRIA, etc.)
  * @param pedidoId    identificador do pedido
  * @param valorFrete  valor calculado do frete
  * @param prazoEntrega prazo estimado de entrega

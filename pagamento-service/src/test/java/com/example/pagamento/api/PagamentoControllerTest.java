@@ -13,10 +13,19 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Testes unitários do {@link PagamentoController}.
+ * Valida processamento de pagamento, status e validação de dados.
+ */
 class PagamentoControllerTest {
 
     private PagamentoController pagamentoController;
 
+    /**
+     * Configura o ambiente de teste com failRate=0 e delayMs=0.
+     *
+     * @throws Exception se houver erro ao injetar valores via reflexão
+     */
     @BeforeEach
     void setUp() throws Exception {
         pagamentoController = new PagamentoController();

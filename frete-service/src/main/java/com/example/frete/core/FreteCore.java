@@ -10,6 +10,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Núcleo de lógica de negócio do serviço de frete.
+ * Calcula valor e prazo de entrega baseado na quantidade de itens e CEP de destino.
+ */
 @Service
 public class FreteCore {
 
@@ -17,6 +21,12 @@ public class FreteCore {
 
     private final Map<String, FreteResponse> fretes = new ConcurrentHashMap<>();
 
+    /**
+     * Calcula o frete para um pedido.
+     *
+     * @param request dados para o calculo (pedidoId, sku, quantidade, cepDestino)
+     * @return resposta com freteId, valor e prazo de entrega
+     */
     public FreteResponse calcular(FreteRequest request) {
         log.info("Calculando frete (pedidoId={}, sku={}, quantidade={}, cepDestino={})",
                 request.pedidoId(), request.sku(), request.quantidade(), request.cepDestino());
@@ -39,6 +49,12 @@ public class FreteCore {
         return response;
     }
 
+    /**
+     * Cancela um frete calculado.
+     *
+     * @param freteId identificador do frete a ser cancelado
+     * @return {@code true} se o frete foi cancelado com sucesso, {@code false} se nao encontrado
+     */
     public boolean cancelar(String freteId) {
         log.info("Solicitacao de cancelamento de frete (freteId={})", freteId);
         FreteResponse frete = fretes.get(freteId);
@@ -50,12 +66,26 @@ public class FreteCore {
         return true;
     }
 
+    /**
+     * Calcula o valor do frete baseado na quantidade de itens.
+     * Formula: valorBase (10.0) + (quantidade * 5.0).
+     *
+     * @param quantidade quantidade de itens
+     * @return valor total do frete
+     */
     private double calcularValorFrete(int quantidade) {
         double valorBase = 10.0;
         double valorPorItem = 5.0;
         return valorBase + (quantidade * valorPorItem);
     }
 
+    /**
+     * Calcula o prazo de entrega baseado no CEP de destino.
+     * Regiões: SP (3 dias), Sudeste (4 dias), Nordeste/Sul (5 dias), Norte/Centro-Oeste (7 dias).
+     *
+     * @param cepDestino CEP de destino
+     * @return prazo estimado de entrega em dias uteis
+     */
     private String calcularPrazo(String cepDestino) {
         if (cepDestino == null || cepDestino.isBlank()) {
             return "5 dias uteis";

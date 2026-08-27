@@ -26,6 +26,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Testes unitários do {@link PedidoCore}.
+ * Valida o fluxo de criação de pedido (saga), validação de dados e busca.
+ */
 @ExtendWith(MockitoExtension.class)
 class PedidoCoreTest {
 
@@ -37,6 +41,9 @@ class PedidoCoreTest {
 
     private CriarPedidoRequest requestValido;
 
+    /**
+     * Configura o ambiente de teste com um request valido.
+     */
     @BeforeEach
     void setUp() {
         requestValido = new CriarPedidoRequest("SKU-ABC", 2, 120.50, "01310-100");

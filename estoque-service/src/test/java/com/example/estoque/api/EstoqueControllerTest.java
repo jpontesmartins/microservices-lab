@@ -23,6 +23,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Testes unitários do {@link EstoqueController}.
+ * Valida listagem de itens, criação e cancelamento de reservas.
+ */
 @ExtendWith(MockitoExtension.class)
 class EstoqueControllerTest {
 
@@ -34,6 +38,9 @@ class EstoqueControllerTest {
 
     private ReservaResponse reservaResponse;
 
+    /**
+     * Configura o ambiente de teste com uma resposta de reserva padrao.
+     */
     @BeforeEach
     void setUp() {
         reservaResponse = new ReservaResponse("reserva-001", "RESERVADO", "ABC-123", 5, "pedido-001");

@@ -24,6 +24,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Testes unitários do {@link IntegracoesService}.
+ * Valida chamadas a serviços downstream, fallbacks e best-effort cancellations.
+ */
 @ExtendWith(MockitoExtension.class)
 class IntegracoesServiceTest {
 
@@ -39,6 +43,12 @@ class IntegracoesServiceTest {
     @InjectMocks
     private IntegracoesService integracoesService;
 
+    /**
+     * Cria uma exceção Feign com o status HTTP especificado.
+     *
+     * @param status código de status HTTP
+     * @return exceção FeignException com o status informado
+     */
     private static FeignException feignExceptionWithStatus(int status) {
         return FeignException.errorStatus("test",
                 feign.Response.builder()

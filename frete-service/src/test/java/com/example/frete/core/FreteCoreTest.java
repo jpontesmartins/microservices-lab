@@ -9,10 +9,17 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Testes unitários do {@link FreteCore}.
+ * Valida cálculo de frete por região, cancelamento e unicidade de IDs.
+ */
 class FreteCoreTest {
 
     private FreteCore freteCore;
 
+    /**
+     * Configura o ambiente de teste com uma nova instancia de FreteCore.
+     */
     @BeforeEach
     void setUp() {
         freteCore = new FreteCore();

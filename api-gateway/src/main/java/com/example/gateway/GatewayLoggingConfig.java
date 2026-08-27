@@ -13,11 +13,20 @@ import org.springframework.web.server.ServerWebExchange;
 import java.time.Duration;
 import java.time.Instant;
 
+/**
+ * Configuração de logging global do API Gateway.
+ * Registra method, path, query, routeId, status e duração de cada requisição.
+ */
 @Configuration
 public class GatewayLoggingConfig {
 
     private static final Logger log = LoggerFactory.getLogger(GatewayLoggingConfig.class);
 
+    /**
+     * Cria um filtro global que registra o início e fim de cada requisição passando pelo gateway.
+     *
+     * @return GlobalFilter com logging de requisicoes
+     */
     @Bean
     public GlobalFilter requestLoggingFilter() {
         return (exchange, chain) -> {
@@ -40,6 +49,12 @@ public class GatewayLoggingConfig {
         };
     }   
 
+    /**
+     * Resolve o ID da rota associada a requisicao atual.
+     *
+     * @param exchange contexto da requisicao HTTP
+     * @return ID da rota ou "unknown" se nao encontrada
+     */
     private String resolveRouteId(ServerWebExchange exchange) {
         Route route = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
         return route != null ? route.getId() : "unknown";

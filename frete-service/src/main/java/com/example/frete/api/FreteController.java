@@ -18,6 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * Controller REST para operações de frete.
+ * Calcula valor e prazo de entrega, com simulação de falhas para testes de Circuit Breaker.
+ */
 @RestController
 public class FreteController {
 
@@ -31,10 +35,22 @@ public class FreteController {
     @Value("${frete.delayMs:0}")
     private long delayMs;
 
+    /**
+     * Construtor com injecao de dependencia do nucleo de frete.
+     *
+     * @param frete nucleo de logica de frete
+     */
     public FreteController(FreteCore frete) {
         this.frete = frete;
     }
 
+    /**
+     * Calcula o frete para um pedido.
+     *
+     * @param request dados para o calculo (pedidoId, sku, quantidade, cepDestino)
+     * @return resposta com freteId, valor e prazo de entrega
+     * @throws ResponseStatusException BAD_REQUEST se validacao falhar
+     */
     @PostMapping("/frete/calcular")
     public FreteResponse calcular(@RequestBody FreteRequest request) {
         log.info("Requisicao de frete recebida (pedidoId={}, sku={}, quantidade={}, cepDestino={})",
@@ -70,6 +86,12 @@ public class FreteController {
         }
     }
 
+    /**
+     * Cancela um frete calculado.
+     *
+     * @param freteId identificador do frete a ser cancelado
+     * @throws ResponseStatusException NOT_FOUND se frete nao existir
+     */
     @DeleteMapping("/frete/calcular/{freteId}")
     public void cancelar(@PathVariable String freteId) {
         log.info("Solicitacao de cancelamento de frete recebida (freteId={})", freteId);
@@ -81,6 +103,12 @@ public class FreteController {
         log.info("Frete cancelado com sucesso (freteId={})", freteId);
     }
 
+    /**
+     * Cancela um frete calculado via POST (alternativo ao DELETE).
+     *
+     * @param freteId identificador do frete a ser cancelado
+     * @throws ResponseStatusException NOT_FOUND se frete nao existir
+     */
     @PostMapping("/frete/calcular/{freteId}/cancelar")
     public void cancelarPorPost(@PathVariable String freteId) {
         log.info("Solicitacao de cancelamento de frete via POST recebida (freteId={})", freteId);
@@ -102,6 +130,13 @@ public class FreteController {
     // }
 
     // === Estudo: Simulacao de falhas para testar Circuit Breaker ===
+
+    /**
+     * Simula falhas e latência no frete para fins de teste de Circuit Breaker.
+     * Usa configuração via application.yml: {@code frete.failRate} e {@code frete.delayMs}.
+     *
+     * @param pedidoId identificador do pedido (para fins de log)
+     */
     private void simularFalha(String pedidoId) {
         if (delayMs > 0) {
             log.info("Simulando latencia de frete (pedidoId={}, delayMs={})", pedidoId, delayMs);
@@ -114,7 +149,7 @@ public class FreteController {
         }
         if (ThreadLocalRandom.current().nextDouble() < failRate) {
             log.warn("Falha simulada no frete (pedidoId={}, failRate={})", pedidoId, failRate);
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Falha simulada no servico de frete");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Falha simulada no serviço de frete");
         }
     }
 }
