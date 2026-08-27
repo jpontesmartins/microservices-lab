@@ -276,8 +276,6 @@ Os serviços agora registram logs por etapa do fluxo:
 
 Os logs usam `traceId` e `spanId` no pattern, então quando o Zipkin estiver ativo fica mais fácil correlacionar uma mesma requisição entre serviços.
 
-Se o Zipkin estiver rodando fora do host da aplicação, ajuste `ZIPKIN_BASE_URL`. No `docker-compose.yml` da raiz, ele já aponta para `http://host.docker.internal:9411` para conversar com o compose de observabilidade.
-
 ## Configuração do Eureka (DEV vs TST)
 
 Todos os clientes Eureka (gateway + microserviços) usam a URL do registry via:
