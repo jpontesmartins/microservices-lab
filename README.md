@@ -226,9 +226,9 @@ Os fallbacks distinguem dois tipos de falha:
 
 1. Configure falhas no `frete-service` ou `pagamento-service` via `application.yml`:
    - `frete.failRate=0.8` (80% de falhas simuladas no frete)
-   - `frete.delayMs=3000` (latencia simulada de 3s no frete)
+   - `frete.delayMs=3000` (latência simulada de 3s no frete)
    - `pagamento.failRate=0.8` (80% de falhas simuladas no pagamento)
-   - `pagamento.delayMs=3000` (latencia simulada de 3s no pagamento)
+   - `pagamento.delayMs=3000` (latência simulada de 3s no pagamento)
 
 2. Após 5 chamadas (minimumNumberOfCalls), o circuit breaker correspondente deve abrir.
 
@@ -262,36 +262,18 @@ O projeto inclui o **Kafka UI** para visualização das topics, mensagens, consu
 | **Topics** | Lista de todas as topics, particições e configurações |
 | **Messages** | Visualização de mensagens em tempo real com serialização JSON |
 | **Consumer Groups** | Status dos grupos de consumo e offsets lag |
-| **Schema Registry** | Gestão de schemas (se habilitado) |
-| **Kafka Connect** | Conectores (se habilitado) |
 
-### Configuração no docker-compose
-
-```yaml
-kafka-ui:
-  image: provectuslabs/kafka-ui:latest
-  container_name: kafka-ui
-  ports:
-    - "8089:8080"
-  environment:
-    KAFKA_CLUSTERS_0_NAME: local
-    KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-    KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-  networks:
-    - ms-net
 ```
-
-> **Nota:** Para adicionar o Kafka UI, inclua o serviço acima no `docker-compose.yml` e execute `docker compose up --build`.
 
 ## Logs e Tracing
 
 Os serviços agora registram logs por etapa do fluxo:
 
 - entrada no gateway, rota escolhida e tempo total da chamada;
-- validacao e criacao do pedido no `vendas-service`;
+- validação e criação do pedido no `vendas-service`;
 - reserva e cancelamento de estoque no `estoque-service`;
-- calculo e cancelamento de frete no `frete-service`;
-- simulacao, aprovacao e falhas do pagamento no `pagamento-service`.
+- cálculo e cancelamento de frete no `frete-service`;
+- simulação, aprovação e falhas do pagamento no `pagamento-service`.
 
 Os logs usam `traceId` e `spanId` no pattern, então quando o Zipkin estiver ativo fica mais fácil correlacionar uma mesma requisição entre serviços.
 
