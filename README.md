@@ -263,7 +263,6 @@ O projeto inclui o **Kafka UI** para visualização das topics, mensagens, consu
 | **Messages** | Visualização de mensagens em tempo real com serialização JSON |
 | **Consumer Groups** | Status dos grupos de consumo e offsets lag |
 
-```
 
 ## Logs e Tracing
 
