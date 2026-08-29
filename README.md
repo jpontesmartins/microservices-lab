@@ -1,4 +1,4 @@
-# Microservices Lab - Java 21 (Spring Cloud + Kafka)
+# Microservices Lab
 
 Este repositório contém 6 aplicações Spring Boot independentes, montando um ecossistema completo para estudo de microsserviços: Service Discovery (Eureka), API Gateway (Spring Cloud Gateway), comunicação assíncrona via Kafka, resiliência com Circuit Breaker (Resilience4j) e observabilidade (Micrometer + Zipkin + Prometheus).
 
