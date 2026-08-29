@@ -4,6 +4,7 @@ import com.example.vendas.core.dto.CriarPedidoRequest;
 import com.example.vendas.core.dto.PedidoResponse;
 import com.example.vendas.integration.BusinessException;
 import com.example.vendas.integration.IntegracoesService;
+import com.example.vendas.integration.PedidoCriadoProducer;
 import com.example.vendas.integration.dto.FreteResponse;
 import com.example.vendas.integration.dto.PagamentoResponse;
 import com.example.vendas.integration.dto.ReservaResponse;
@@ -35,6 +36,9 @@ class PedidoCoreTest {
 
     @Mock
     private IntegracoesService integracoes;
+
+    @Mock
+    private PedidoCriadoProducer pedidoCriadoProducer;
 
     @InjectMocks
     private PedidoCore pedidoCore;
