@@ -1,12 +1,12 @@
 package com.example.vendas.pedido.web.dto;
 
+import java.util.List;
+
 /**
  * Request para criacao de um novo pedido.
  *
- * @param sku        codigo do produto
- * @param quantidade quantidade do produto
- * @param valor      valor unitario do produto
+ * @param items     lista de itens do pedido
  * @param cepDestino CEP de destino para calculo de frete
  */
-public record CriarPedidoRequest(String sku, int quantidade, double valor, String cepDestino) {
+public record CriarPedidoRequest(List<ItemPedidoRequest> items, String cepDestino) {
 }

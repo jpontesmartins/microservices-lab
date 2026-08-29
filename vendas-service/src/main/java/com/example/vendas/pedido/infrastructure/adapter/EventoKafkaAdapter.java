@@ -1,5 +1,6 @@
 package com.example.vendas.pedido.infrastructure.adapter;
 
+import com.example.vendas.pedido.domain.model.ItemPedido;
 import com.example.vendas.pedido.domain.model.Pedido;
 import com.example.vendas.pedido.domain.port.EventoPublicacaoPort;
 import com.example.vendas.pedido.infrastructure.dto.PedidoCriadoEvent;
@@ -7,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class EventoKafkaAdapter implements EventoPublicacaoPort {
@@ -21,11 +24,16 @@ public class EventoKafkaAdapter implements EventoPublicacaoPort {
 
     @Override
     public void publicarPedidoCriado(Pedido pedido) {
+        List<PedidoCriadoEvent.ItemEvent> itemEvents = pedido.getItems().stream()
+                .map(item -> new PedidoCriadoEvent.ItemEvent(
+                        item.getSku(), item.getQuantidade(), item.getValorUnitario(), item.getSubtotal()))
+                .toList();
+
         PedidoCriadoEvent event = new PedidoCriadoEvent(
                 pedido.getPedidoId(),
-                pedido.getSku(),
-                pedido.getQuantidade(),
+                itemEvents,
                 pedido.calcularValorTotal(),
+                pedido.calcularValorFreteTotal(),
                 pedido.getCepDestino()
         );
         log.info("Publicando evento PedidoCriado no Kafka (topic={}, pedidoId={})", TOPIC, event.pedidoId());

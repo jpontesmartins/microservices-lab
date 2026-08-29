@@ -1,50 +1,45 @@
 package com.example.vendas.pedido.domain.model;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Modelo de dominio que representa um Pedido no bounded context de vendas.
  * Encapsula as regras de negocio e estado do pedido ao longo do fluxo saga.
+ * Um pedido contem uma lista de itens, cada um com suas integracoes de estoque e frete.
  */
 public class Pedido {
 
     private String pedidoId;
-    private String sku;
-    private int quantidade;
-    private double valor;
     private String cepDestino;
     private StatusPedido status;
     private Instant criadoEm;
-    private String reservaId;
-    private String freteId;
-    private double valorFrete;
-    private String prazoEntrega;
     private String transacaoId;
+    private final List<ItemPedido> items = new ArrayList<>();
 
     private Pedido() {
     }
 
-    public static Pedido criar(String pedidoId, String sku, int quantidade, double valor, String cepDestino) {
+    public static Pedido criar(String pedidoId, String cepDestino) {
         Pedido pedido = new Pedido();
         pedido.pedidoId = pedidoId;
-        pedido.sku = sku;
-        pedido.quantidade = quantidade;
-        pedido.valor = valor;
         pedido.cepDestino = cepDestino;
         pedido.status = StatusPedido.CRIADO;
         pedido.criadoEm = Instant.now();
         return pedido;
     }
 
+    public void adicionarItem(ItemPedido item) {
+        this.items.add(item);
+    }
+
     public void reservarEstoque(String reservaId) {
-        this.reservaId = reservaId;
         this.status = StatusPedido.ESTOQUE_RESERVADO;
     }
 
-    public void calcularFrete(String freteId, double valorFrete, String prazoEntrega) {
-        this.freteId = freteId;
-        this.valorFrete = valorFrete;
-        this.prazoEntrega = prazoEntrega;
+    public void calcularFrete() {
         this.status = StatusPedido.FRETE_CALCULADO;
     }
 
@@ -58,23 +53,17 @@ public class Pedido {
     }
 
     public double calcularValorTotal() {
-        return this.valor + this.valorFrete;
+        double subtotal = items.stream().mapToDouble(ItemPedido::getSubtotal).sum();
+        double freteTotal = calcularValorFreteTotal();
+        return subtotal + freteTotal;
+    }
+
+    public double calcularValorFreteTotal() {
+        return items.stream().mapToDouble(ItemPedido::getValorFrete).sum();
     }
 
     public String getPedidoId() {
         return pedidoId;
-    }
-
-    public String getSku() {
-        return sku;
-    }
-
-    public int getQuantidade() {
-        return quantidade;
-    }
-
-    public double getValor() {
-        return valor;
     }
 
     public String getCepDestino() {
@@ -89,23 +78,11 @@ public class Pedido {
         return criadoEm;
     }
 
-    public String getReservaId() {
-        return reservaId;
-    }
-
-    public String getFreteId() {
-        return freteId;
-    }
-
-    public double getValorFrete() {
-        return valorFrete;
-    }
-
-    public String getPrazoEntrega() {
-        return prazoEntrega;
-    }
-
     public String getTransacaoId() {
         return transacaoId;
+    }
+
+    public List<ItemPedido> getItems() {
+        return Collections.unmodifiableList(items);
     }
 }

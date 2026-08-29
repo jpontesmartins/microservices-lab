@@ -95,10 +95,15 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/vendas
+      - SPRING_DATASOURCE_USERNAME=vendas
+      - SPRING_DATASOURCE_PASSWORD=vendas
     ports:
       - "8081:8081"
     networks:
@@ -189,6 +194,23 @@ services:
       - "8086:8086"
     networks:
       - ms-net
+
+  postgres:
+    image: postgres:14
+    container_name: postgres
+    environment:
+      POSTGRES_DB: vendas
+      POSTGRES_USER: vendas
+      POSTGRES_PASSWORD: vendas
+    ports:
+      - "5432:5432"
+    networks:
+      - ms-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vendas -d vendas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 networks:
   ms-net:

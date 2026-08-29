@@ -26,10 +26,9 @@ public class PedidoController {
 
     @PostMapping("/vendas/pedidos")
     public PedidoResponse criar(@RequestBody CriarPedidoRequest request) {
-        log.info("Recebida requisicao de criacao de pedido (sku={}, quantidade={}, valor={})",
-                request != null ? request.sku() : null,
-                request != null ? request.quantidade() : null,
-                request != null ? request.valor() : null);
+        log.info("Recebida requisicao de criacao de pedido (totalItens={}, cepDestino={})",
+                request != null && request.items() != null ? request.items().size() : 0,
+                request != null ? request.cepDestino() : null);
         try {
             PedidoResponse response = pedidos.criarPedido(request);
             log.info("Pedido processado com sucesso (pedidoId={}, status={})", response.pedidoId(), response.status());

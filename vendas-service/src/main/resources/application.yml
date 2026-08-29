@@ -1,6 +1,19 @@
 spring:
   application:
     name: vendas-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/vendas}
+    username: ${SPRING_DATASOURCE_USERNAME:vendas}
+    password: ${SPRING_DATASOURCE_PASSWORD:vendas}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
   cloud:
     openfeign:
       client:
