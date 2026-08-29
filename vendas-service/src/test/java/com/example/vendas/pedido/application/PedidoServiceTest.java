@@ -46,7 +46,7 @@ class PedidoServiceTest {
     private EventoPublicacaoPort eventoPublicacao;
 
     @InjectMocks
-    private PedidoService useCase;
+    private PedidoService pedidoService;
 
     private CriarPedidoRequest requestValido;
 
@@ -70,7 +70,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(anyString(), anyDouble())).thenReturn(pagamento);
 
-            PedidoResponse response = useCase.criarPedido(requestValido);
+            PedidoResponse response = pedidoService.criarPedido(requestValido);
 
             assertThat(response).isNotNull();
             assertThat(response.status()).isEqualTo("PAGO");
@@ -93,7 +93,7 @@ class PedidoServiceTest {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2)))
                     .thenThrow(new BusinessException("FALHA_ESTOQUE", null));
 
-            PedidoResponse response = useCase.criarPedido(requestValido);
+            PedidoResponse response = pedidoService.criarPedido(requestValido);
 
             assertThat(response.status()).isEqualTo("FALHA_ESTOQUE");
             assertThat(response.reservaId()).isNull();
@@ -108,7 +108,7 @@ class PedidoServiceTest {
         void deveRetornarFALHA_TRANSITORIAQuandoEstoqueRetornaNull() {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(null);
 
-            PedidoResponse response = useCase.criarPedido(requestValido);
+            PedidoResponse response = pedidoService.criarPedido(requestValido);
 
             assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
         }
@@ -119,7 +119,7 @@ class PedidoServiceTest {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2)))
                     .thenReturn(new ReservaEstoqueResult(null, "FALHA_TRANSITORIA"));
 
-            PedidoResponse response = useCase.criarPedido(requestValido);
+            PedidoResponse response = pedidoService.criarPedido(requestValido);
 
             assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             assertThat(response.reservaId()).isNull();
@@ -134,7 +134,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100")))
                     .thenThrow(new BusinessException("FALHA_FRETE", null));
 
-            PedidoResponse response = useCase.criarPedido(requestValido);
+            PedidoResponse response = pedidoService.criarPedido(requestValido);
 
             assertThat(response.status()).isEqualTo("FALHA_FRETE");
             assertThat(response.reservaId()).isEqualTo("reserva-001");
@@ -151,7 +151,7 @@ class PedidoServiceTest {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(null);
 
-            PedidoResponse response = useCase.criarPedido(requestValido);
+            PedidoResponse response = pedidoService.criarPedido(requestValido);
 
             assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
@@ -166,7 +166,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100")))
                     .thenReturn(new FreteResult(null, "FALHA_TRANSITORIA", 0.0, null));
 
-            PedidoResponse response = useCase.criarPedido(requestValido);
+            PedidoResponse response = pedidoService.criarPedido(requestValido);
 
             assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
@@ -182,7 +182,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(anyString(), eq(140.50))).thenReturn(null);
 
-            PedidoResponse response = useCase.criarPedido(requestValido);
+            PedidoResponse response = pedidoService.criarPedido(requestValido);
 
             assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             assertThat(response.reservaId()).isEqualTo("reserva-001");
@@ -202,7 +202,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(anyString(), eq(140.50))).thenReturn(pagamentoFalhaTransitoria);
 
-            PedidoResponse response = useCase.criarPedido(requestValido);
+            PedidoResponse response = pedidoService.criarPedido(requestValido);
 
             assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             assertThat(response.reservaId()).isEqualTo("reserva-001");
@@ -222,7 +222,7 @@ class PedidoServiceTest {
             when(integracoes.processarPagamento(anyString(), eq(140.50)))
                     .thenThrow(new BusinessException("FALHA_PAGAMENTO", null));
 
-            PedidoResponse response = useCase.criarPedido(requestValido);
+            PedidoResponse response = pedidoService.criarPedido(requestValido);
 
             assertThat(response.status()).isEqualTo("FALHA_PAGAMENTO");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
@@ -237,7 +237,7 @@ class PedidoServiceTest {
         @Test
         @DisplayName("deve lancar excecao quando request e null")
         void deveLancarExcecaoQuandoRequestENull() {
-            assertThatThrownBy(() -> useCase.criarPedido(null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Body obrigatorio");
         }
@@ -247,7 +247,7 @@ class PedidoServiceTest {
         void deveLancarExcecaoQuandoSkuEVazio() {
             CriarPedidoRequest request = new CriarPedidoRequest("", 1, 100.0, "01310-100");
 
-            assertThatThrownBy(() -> useCase.criarPedido(request))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("sku obrigatorio");
         }
@@ -257,7 +257,7 @@ class PedidoServiceTest {
         void deveLancarExcecaoQuandoQuantidadeEMenorOuIgualAZero() {
             CriarPedidoRequest request = new CriarPedidoRequest("SKU", 0, 100.0, "01310-100");
 
-            assertThatThrownBy(() -> useCase.criarPedido(request))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("quantidade deve ser > 0");
         }
@@ -267,7 +267,7 @@ class PedidoServiceTest {
         void deveLancarExcecaoQuandoValorEMenorOuIgualAZero() {
             CriarPedidoRequest request = new CriarPedidoRequest("SKU", 1, 0.0, "01310-100");
 
-            assertThatThrownBy(() -> useCase.criarPedido(request))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("valor deve ser > 0");
         }
@@ -277,7 +277,7 @@ class PedidoServiceTest {
         void deveLancarExcecaoQuandoCepDestinoEVazio() {
             CriarPedidoRequest request = new CriarPedidoRequest("SKU", 1, 100.0, "");
 
-            assertThatThrownBy(() -> useCase.criarPedido(request))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("cepDestino obrigatorio");
         }
@@ -287,7 +287,7 @@ class PedidoServiceTest {
         void deveLancarExcecaoQuandoCepDestinoENull() {
             CriarPedidoRequest request = new CriarPedidoRequest("SKU", 1, 100.0, null);
 
-            assertThatThrownBy(() -> useCase.criarPedido(request))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("cepDestino obrigatorio");
         }
@@ -300,7 +300,7 @@ class PedidoServiceTest {
         @Test
         @DisplayName("deve retornar null quando pedido nao existe")
         void deveRetornarNullQuandoPedidoNaoExiste() {
-            PedidoResponse response = useCase.buscar("pedido-inexistente");
+            PedidoResponse response = pedidoService.buscar("pedido-inexistente");
 
             assertThat(response).isNull();
         }
