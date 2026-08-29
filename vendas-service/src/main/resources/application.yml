@@ -73,7 +73,7 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         # Erros de negocio (4xx) nao devem abrir o circuito.
         ignoreExceptions:
-          - com.example.vendas.integration.BusinessException
+          - com.example.vendas.shared.exception.BusinessException
       pagamento:
         slidingWindowType: COUNT_BASED
         slidingWindowSize: 10
@@ -85,7 +85,7 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 3
         automaticTransitionFromOpenToHalfOpenEnabled: true
         ignoreExceptions:
-          - com.example.vendas.integration.BusinessException
+          - com.example.vendas.shared.exception.BusinessException
       frete:
         slidingWindowType: COUNT_BASED
         slidingWindowSize: 10
@@ -97,7 +97,7 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 3
         automaticTransitionFromOpenToHalfOpenEnabled: true
         ignoreExceptions:
-          - com.example.vendas.integration.BusinessException
+          - com.example.vendas.shared.exception.BusinessException
 
 logging:
   pattern:

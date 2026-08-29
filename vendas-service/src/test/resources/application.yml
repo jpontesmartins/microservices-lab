@@ -33,7 +33,7 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 3
         automaticTransitionFromOpenToHalfOpenEnabled: true
         ignoreExceptions:
-          - com.example.vendas.integration.BusinessException
+          - com.example.vendas.shared.exception.BusinessException
       frete:
         slidingWindowType: COUNT_BASED
         slidingWindowSize: 10
@@ -43,7 +43,7 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 3
         automaticTransitionFromOpenToHalfOpenEnabled: true
         ignoreExceptions:
-          - com.example.vendas.integration.BusinessException
+          - com.example.vendas.shared.exception.BusinessException
       pagamento:
         slidingWindowType: COUNT_BASED
         slidingWindowSize: 10
@@ -53,4 +53,4 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 3
         automaticTransitionFromOpenToHalfOpenEnabled: true
         ignoreExceptions:
-          - com.example.vendas.integration.BusinessException
+          - com.example.vendas.shared.exception.BusinessException
