@@ -95,13 +95,13 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      postgres:
+      postgres-vendas:
         condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/vendas
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vendas:5432/vendas
       - SPRING_DATASOURCE_USERNAME=vendas
       - SPRING_DATASOURCE_PASSWORD=vendas
     ports:
@@ -117,9 +117,14 @@ services:
     depends_on:
       discovery:
         condition: service_healthy
+      postgres-estoque:
+        condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-estoque:5432/estoque
+      - SPRING_DATASOURCE_USERNAME=estoque
+      - SPRING_DATASOURCE_PASSWORD=estoque
     ports:
       - "8082:8082"
     networks:
@@ -195,9 +200,9 @@ services:
     networks:
       - ms-net
 
-  postgres:
+  postgres-vendas:
     image: postgres:14
-    container_name: postgres
+    container_name: postgres-vendas
     environment:
       POSTGRES_DB: vendas
       POSTGRES_USER: vendas
@@ -208,6 +213,23 @@ services:
       - ms-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vendas -d vendas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-estoque:
+    image: postgres:14
+    container_name: postgres-estoque
+    environment:
+      POSTGRES_DB: estoque
+      POSTGRES_USER: estoque
+      POSTGRES_PASSWORD: estoque
+    ports:
+      - "5433:5432"
+    networks:
+      - ms-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U estoque -d estoque"]
       interval: 5s
       timeout: 5s
       retries: 5
