@@ -176,4 +176,54 @@ class CircuitBreakerIntegrationTest {
             assertThat(fallback.transacaoId()).isNull();
         }
     }
+
+    @Nested
+    @DisplayName("Retry + CircuitBreaker - Composicao")
+    class RetryTests {
+
+        @Test
+        @DisplayName("deve acionar fallback apos tentativas quando estoque indisponivel")
+        void deveAcionarFallbackAposTentativasQuandoEstoqueIndisponivel() {
+            IntegracoesPort.ReservaEstoqueResult result = integracoesService.reservarEstoque(
+                    "pedido-001", "SKU-ABC", 2);
+
+            assertThat(result).isNotNull();
+            assertThat(result.status()).isEqualTo("FALHA_TRANSITORIA");
+            assertThat(result.reservaId()).isNull();
+        }
+
+        @Test
+        @DisplayName("deve acionar fallback apos tentativas quando frete indisponivel")
+        void deveAcionarFallbackAposTentativasQuandoFreteIndisponivel() {
+            IntegracoesPort.FreteResult result = integracoesService.calcularFrete(
+                    "pedido-001", "SKU-ABC", 2, "01310-100");
+
+            assertThat(result).isNotNull();
+            assertThat(result.status()).isEqualTo("FALHA_TRANSITORIA");
+            assertThat(result.freteId()).isNull();
+            assertThat(result.valorFrete()).isEqualTo(0.0);
+        }
+
+        @Test
+        @DisplayName("deve acionar fallback apos tentativas quando pagamento indisponivel")
+        void deveAcionarFallbackAposTentativasQuandoPagamentoIndisponivel() {
+            IntegracoesPort.PagamentoResult result = integracoesService.processarPagamento(
+                    "pedido-001", 140.50);
+
+            assertThat(result).isNotNull();
+            assertThat(result.status()).isEqualTo("FALHA_TRANSITORIA");
+            assertThat(result.transacaoId()).isNull();
+        }
+
+        @Test
+        @DisplayName("deve abrir circuit breaker apos falhas repetidas com retry")
+        void deveAbrirCircuitBreakerAposFalhasRepetidasComRetry() {
+            for (int i = 0; i < 5; i++) {
+                integracoesService.reservarEstoque("pedido-" + i, "SKU-ABC", 2);
+            }
+
+            CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("estoque");
+            assertThat(cb.getState()).isEqualTo(CircuitBreaker.State.OPEN);
+        }
+    }
 }

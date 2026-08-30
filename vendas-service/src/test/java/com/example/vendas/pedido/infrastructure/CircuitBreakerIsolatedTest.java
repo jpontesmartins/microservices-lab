@@ -6,6 +6,9 @@ import com.example.vendas.pedido.infrastructure.dto.ReservaResponse;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -338,6 +341,114 @@ class CircuitBreakerIsolatedTest {
 
             CircuitBreaker.Metrics metrics = cb.getMetrics();
             assertThat(metrics.getNumberOfNotPermittedCalls()).isEqualTo(3);
+        }
+    }
+
+    @Nested
+    @DisplayName("Retry - Tentativas automaticas")
+    class RetryTests {
+
+        @Test
+        @DisplayName("deve repetir chamada ate maxAttempts quando falha")
+        void deveRepetirChamadaAteMaxAttemptsQuandoFalha() {
+            RetryConfig retryConfig = RetryConfig.custom()
+                    .maxAttempts(3)
+                    .waitDuration(Duration.ofMillis(100))
+                    .build();
+            RetryRegistry retryRegistry = RetryRegistry.of(retryConfig);
+            Retry retry = retryRegistry.retry("teste-retry-falha");
+
+            int[] attempts = {0};
+            Supplier<String> decorated = Retry.decorateSupplier(retry, () -> {
+                attempts[0]++;
+                throw new RuntimeException("Falha simulada");
+            });
+
+            try {
+                decorated.get();
+            } catch (RuntimeException ignored) {
+            }
+
+            assertThat(attempts[0]).isEqualTo(3);
+            Retry.Metrics metrics = retry.getMetrics();
+            assertThat(metrics.getNumberOfFailedCallsWithRetryAttempt()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("deve retornar resultado na segunda tentativa quando primeira falha")
+        void deveRetornarResultadoNaSegundaTentativaQuandoPrimeiraFalha() {
+            RetryConfig retryConfig = RetryConfig.custom()
+                    .maxAttempts(3)
+                    .waitDuration(Duration.ofMillis(100))
+                    .build();
+            RetryRegistry retryRegistry = RetryRegistry.of(retryConfig);
+            Retry retry = retryRegistry.retry("teste-retry-sucesso");
+
+            int[] attempts = {0};
+            Supplier<String> decorated = Retry.decorateSupplier(retry, () -> {
+                attempts[0]++;
+                if (attempts[0] == 1) {
+                    throw new RuntimeException("Falha na primeira tentativa");
+                }
+                return "sucesso";
+            });
+
+            String result = decorated.get();
+
+            assertThat(result).isEqualTo("sucesso");
+            assertThat(attempts[0]).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("nao deve repetir chamada quando excecao nao esta na lista de retryExceptions")
+        void deveNaoRepetirChamadaQuandoExcecaoNaoEstaNaListaDeRetryExceptions() {
+            RetryConfig retryConfig = RetryConfig.custom()
+                    .maxAttempts(3)
+                    .waitDuration(Duration.ofMillis(100))
+                    .retryExceptions(java.io.IOException.class)
+                    .build();
+            RetryRegistry retryRegistry = RetryRegistry.of(retryConfig);
+            Retry retry = retryRegistry.retry("teste-retry-ignore");
+
+            int[] attempts = {0};
+            Supplier<String> decorated = Retry.decorateSupplier(retry, () -> {
+                attempts[0]++;
+                throw new IllegalArgumentException("Excecao ignorada");
+            });
+
+            try {
+                decorated.get();
+            } catch (IllegalArgumentException ignored) {
+            }
+
+            assertThat(attempts[0]).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("deve registrar metricas de tentativas com sucesso e falha")
+        void deveRegistrarMetricasDeTentativas() {
+            RetryConfig retryConfig = RetryConfig.custom()
+                    .maxAttempts(3)
+                    .waitDuration(Duration.ofMillis(100))
+                    .build();
+            RetryRegistry retryRegistry = RetryRegistry.of(retryConfig);
+            Retry retry = retryRegistry.retry("teste-retry-metricas");
+
+            int[] attempts = {0};
+            Supplier<String> decorated = Retry.decorateSupplier(retry, () -> {
+                attempts[0]++;
+                if (attempts[0] <= 2) {
+                    throw new RuntimeException("Falha");
+                }
+                return "ok";
+            });
+
+            String result = decorated.get();
+
+            assertThat(result).isEqualTo("ok");
+            Retry.Metrics metrics = retry.getMetrics();
+            assertThat(metrics.getNumberOfSuccessfulCallsWithRetryAttempt()).isEqualTo(1);
+            assertThat(metrics.getNumberOfFailedCallsWithRetryAttempt()).isEqualTo(0);
         }
     }
 }

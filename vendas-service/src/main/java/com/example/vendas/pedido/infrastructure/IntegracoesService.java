@@ -13,6 +13,7 @@ import com.example.vendas.pedido.infrastructure.dto.ReservaResponse;
 import com.example.vendas.shared.exception.BusinessException;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class IntegracoesService implements IntegracoesPort {
     }
 
     @Override
+    @Retry(name = "estoque", fallbackMethod = "reservaFallback")
     @CircuitBreaker(name = "estoque", fallbackMethod = "reservaFallback")
     public ReservaEstoqueResult reservarEstoque(String pedidoId, String sku, int quantidade) {
         log.info("Chamando estoque-service para reserva (pedidoId={}, sku={}, quantidade={})", pedidoId, sku, quantidade);
@@ -57,6 +59,7 @@ public class IntegracoesService implements IntegracoesPort {
     }
 
     @Override
+    @Retry(name = "frete", fallbackMethod = "freteFallback")
     @CircuitBreaker(name = "frete", fallbackMethod = "freteFallback")
     public FreteResult calcularFrete(String pedidoId, String sku, int quantidade, String cepDestino) {
         log.info("Chamando frete-service para calculo (pedidoId={}, sku={}, quantidade={}, cepDestino={})",
@@ -83,6 +86,7 @@ public class IntegracoesService implements IntegracoesPort {
     }
 
     @Override
+    @Retry(name = "pagamento", fallbackMethod = "pagamentoFallback")
     @CircuitBreaker(name = "pagamento", fallbackMethod = "pagamentoFallback")
     public PagamentoResult processarPagamento(String pedidoId, double valor) {
         log.info("Chamando pagamento-service (pedidoId={}, valor={})", pedidoId, valor);

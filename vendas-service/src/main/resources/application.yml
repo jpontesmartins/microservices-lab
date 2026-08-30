@@ -60,6 +60,41 @@ info:
     name: vendas service
 
 resilience4j:
+  retry:
+    instances:
+      estoque:
+        maxAttempts: 3
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.client.ResourceAccessException
+        ignoreExceptions:
+          - com.example.vendas.shared.exception.BusinessException
+      frete:
+        maxAttempts: 3
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.client.ResourceAccessException
+        ignoreExceptions:
+          - com.example.vendas.shared.exception.BusinessException
+      pagamento:
+        maxAttempts: 3
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.client.ResourceAccessException
+        ignoreExceptions:
+          - com.example.vendas.shared.exception.BusinessException
   circuitbreaker:
     instances:
       estoque:
@@ -115,3 +150,5 @@ resilience4j:
 logging:
   pattern:
     level: "%5p [%X{traceId:-},%X{spanId:-}]"
+  level:
+    io.github.resilience4j: DEBUG
