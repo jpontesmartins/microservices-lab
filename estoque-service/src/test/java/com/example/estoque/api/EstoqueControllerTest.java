@@ -1,9 +1,13 @@
 package com.example.estoque.api;
 
-import com.example.estoque.core.EstoqueCore;
-import com.example.estoque.core.dto.ItemEstoqueResponse;
-import com.example.estoque.core.dto.ReservaRequest;
-import com.example.estoque.core.dto.ReservaResponse;
+import com.example.estoque.application.EstoqueService;
+import com.example.estoque.domain.model.ItemEstoque;
+import com.example.estoque.domain.model.ReservaEstoque;
+import com.example.estoque.web.dto.ItemEstoqueResponse;
+import com.example.estoque.web.dto.ReservaRequest;
+import com.example.estoque.web.dto.ReservaResponse;
+import com.example.estoque.shared.exception.EstoqueInsuficienteException;
+import com.example.estoque.shared.exception.SkuDesconhecidoException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,30 +24,25 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Testes unitários do {@link EstoqueController}.
- * Valida listagem de itens, criação e cancelamento de reservas.
- */
 @ExtendWith(MockitoExtension.class)
 class EstoqueControllerTest {
 
     @Mock
-    private EstoqueCore estoqueCore;
+    private EstoqueService estoqueService;
 
     @InjectMocks
     private EstoqueController estoqueController;
 
-    private ReservaResponse reservaResponse;
+    private ReservaEstoque reservaEstoque;
 
-    /**
-     * Configura o ambiente de teste com uma resposta de reserva padrao.
-     */
     @BeforeEach
     void setUp() {
-        reservaResponse = new ReservaResponse("reserva-001", "RESERVADO", "ABC-123", 5, "pedido-001");
+        reservaEstoque = new ReservaEstoque("reserva-001", "ABC-123", 5, "pedido-001");
     }
 
     @Nested
@@ -53,9 +52,9 @@ class EstoqueControllerTest {
         @Test
         @DisplayName("deve listar itens com sucesso no endpoint legado")
         void deveListarItensComSucessoNoEndpointLegado() {
-            List<ItemEstoqueResponse> itens = List.of(
-                    new ItemEstoqueResponse("ABC-123", "Teclado Mecanico", 42));
-            when(estoqueCore.listarItens()).thenReturn(itens);
+            List<ItemEstoque> itens = List.of(
+                    new ItemEstoque("ABC-123", "Teclado Mecanico", 42));
+            when(estoqueService.listarItens()).thenReturn(itens);
 
             List<ItemEstoqueResponse> result = estoqueController.listarItens();
 
@@ -66,10 +65,10 @@ class EstoqueControllerTest {
         @Test
         @DisplayName("deve listar itens com sucesso no endpoint /estoque/itens")
         void deveListarItensComSucessoNoEndpointComPrefixo() {
-            List<ItemEstoqueResponse> itens = List.of(
-                    new ItemEstoqueResponse("ABC-123", "Teclado Mecanico", 42),
-                    new ItemEstoqueResponse("XYZ-789", "Mouse Gamer", 15));
-            when(estoqueCore.listarItens()).thenReturn(itens);
+            List<ItemEstoque> itens = List.of(
+                    new ItemEstoque("ABC-123", "Teclado Mecanico", 42),
+                    new ItemEstoque("XYZ-789", "Mouse Gamer", 15));
+            when(estoqueService.listarItens()).thenReturn(itens);
 
             List<ItemEstoqueResponse> result = estoqueController.listarItensComPrefixo();
 
@@ -85,7 +84,7 @@ class EstoqueControllerTest {
         @DisplayName("deve reservar estoque com sucesso")
         void deveReservarEstoqueComSucesso() {
             ReservaRequest request = new ReservaRequest("pedido-001", "ABC-123", 5);
-            when(estoqueCore.reservar(any(ReservaRequest.class))).thenReturn(reservaResponse);
+            when(estoqueService.reservar("pedido-001", "ABC-123", 5)).thenReturn(reservaEstoque);
 
             ReservaResponse result = estoqueController.reservar(request);
 
@@ -98,8 +97,8 @@ class EstoqueControllerTest {
         @DisplayName("deve retornar 409 quando estoque e insuficiente")
         void deveRetornar409QuandoEstoqueEInsuficiente() {
             ReservaRequest request = new ReservaRequest("pedido-001", "ABC-123", 100);
-            when(estoqueCore.reservar(any(ReservaRequest.class)))
-                    .thenThrow(new IllegalStateException("Sem estoque para SKU ABC-123"));
+            when(estoqueService.reservar("pedido-001", "ABC-123", 100))
+                    .thenThrow(new EstoqueInsuficienteException("ABC-123", 42));
 
             assertThatThrownBy(() -> estoqueController.reservar(request))
                     .isInstanceOf(ResponseStatusException.class)
@@ -110,10 +109,25 @@ class EstoqueControllerTest {
         }
 
         @Test
+        @DisplayName("deve retornar 400 quando SKU e desconhecido")
+        void deveRetornar400QuandoSkuEDesconhecido() {
+            ReservaRequest request = new ReservaRequest("pedido-001", "SKU-INVALIDO", 1);
+            when(estoqueService.reservar("pedido-001", "SKU-INVALIDO", 1))
+                    .thenThrow(new SkuDesconhecidoException("SKU-INVALIDO"));
+
+            assertThatThrownBy(() -> estoqueController.reservar(request))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+                    });
+        }
+
+        @Test
         @DisplayName("deve retornar 400 quando validacao falha")
         void deveRetornar400QuandoValidacaoFalha() {
             ReservaRequest request = new ReservaRequest("pedido-001", "", 1);
-            when(estoqueCore.reservar(any(ReservaRequest.class)))
+            when(estoqueService.reservar("pedido-001", "", 1))
                     .thenThrow(new IllegalArgumentException("sku obrigatorio"));
 
             assertThatThrownBy(() -> estoqueController.reservar(request))
@@ -132,17 +146,17 @@ class EstoqueControllerTest {
         @Test
         @DisplayName("deve cancelar reserva com sucesso")
         void deveCancelarReservaComSucesso() {
-            when(estoqueCore.cancelarReserva("reserva-001")).thenReturn(true);
+            when(estoqueService.cancelarReserva("reserva-001")).thenReturn(true);
 
             estoqueController.cancelarReserva("reserva-001");
 
-            verify(estoqueCore).cancelarReserva("reserva-001");
+            verify(estoqueService).cancelarReserva("reserva-001");
         }
 
         @Test
         @DisplayName("deve retornar 404 quando reserva nao e encontrada")
         void deveRetornar404QuandoReservaNaoEEncontrada() {
-            when(estoqueCore.cancelarReserva("reserva-inexistente")).thenReturn(false);
+            when(estoqueService.cancelarReserva("reserva-inexistente")).thenReturn(false);
 
             assertThatThrownBy(() -> estoqueController.cancelarReserva("reserva-inexistente"))
                     .isInstanceOf(ResponseStatusException.class)

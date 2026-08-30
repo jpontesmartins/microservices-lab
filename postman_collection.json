@@ -144,7 +144,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"sku\": \"ABC-123\",\n  \"quantidade\": 2,\n  \"valor\": 199.90,\n  \"cepDestino\": \"01310-100\"\n}"
+							"raw": "{\n  \"items\": [\n    {\n      \"sku\": \"ABC-123\",\n      \"quantidade\": 2,\n      \"valor\": 199.90\n    }\n  ],\n  \"cepDestino\": \"01310-100\"\n}"
 						},
 						"description": "Fluxo principal: vendas-service orquestra estoque → frete → pagamento. Copie o pedidoId da resposta para as variáveis de coleção."
 					},
@@ -158,13 +158,16 @@
 									"    pm.collectionVariables.set('pedidoId', jsonData.pedidoId);",
 									"    console.log('pedidoId salvo: ' + jsonData.pedidoId);",
 									"}",
-									"if (jsonData.reservaEstoque && jsonData.reservaEstoque.reservaId) {",
-									"    pm.collectionVariables.set('reservaId', jsonData.reservaEstoque.reservaId);",
-									"    console.log('reservaId salvo: ' + jsonData.reservaEstoque.reservaId);",
-									"}",
-									"if (jsonData.frete && jsonData.frete.freteId) {",
-									"    pm.collectionVariables.set('freteId', jsonData.frete.freteId);",
-									"    console.log('freteId salvo: ' + jsonData.frete.freteId);",
+									"if (jsonData.items && jsonData.items.length > 0) {",
+									"    var firstItem = jsonData.items[0];",
+									"    if (firstItem.reservaId) {",
+									"        pm.collectionVariables.set('reservaId', firstItem.reservaId);",
+									"        console.log('reservaId salvo: ' + firstItem.reservaId);",
+									"    }",
+									"    if (firstItem.freteId) {",
+									"        pm.collectionVariables.set('freteId', firstItem.freteId);",
+									"        console.log('freteId salvo: ' + firstItem.freteId);",
+									"    }",
 									"}"
 								]
 							}
@@ -206,7 +209,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"sku\": \"XYZ-789\",\n  \"quantidade\": 999,\n  \"valor\": 50.00,\n  \"cepDestino\": \"01310-100\"\n}"
+							"raw": "{\n  \"items\": [\n    {\n      \"sku\": \"XYZ-789\",\n      \"quantidade\": 999,\n      \"valor\": 50.00\n    }\n  ],\n  \"cepDestino\": \"01310-100\"\n}"
 						},
 						"description": "Quantidade maior que o estoque disponível. Espera-se erro de estoque e compensação (cancelamento de frete/reserva)."
 					}
@@ -224,7 +227,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"sku\": \"NAO-EXISTE\",\n  \"quantidade\": 1,\n  \"valor\": 100.00,\n  \"cepDestino\": \"01310-100\"\n}"
+							"raw": "{\n  \"items\": [\n    {\n      \"sku\": \"NAO-EXISTE\",\n      \"quantidade\": 1,\n      \"valor\": 100.00\n    }\n  ],\n  \"cepDestino\": \"01310-100\"\n}"
 						},
 						"description": "SKU que não existe no estoque. Espera-se erro de validação."
 					}
@@ -247,7 +250,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"sku\": \"ABC-123\",\n  \"quantidade\": 1,\n  \"valor\": 10.00,\n  \"cepDestino\": \"01310-100\"\n}"
+							"raw": "{\n  \"items\": [\n    {\n      \"sku\": \"ABC-123\",\n      \"quantidade\": 1,\n      \"valor\": 10.00\n    }\n  ],\n  \"cepDestino\": \"01310-100\"\n}"
 						},
 						"description": "Execute 5 vezes com pagamento.failRate=1.0 para abrir o circuit breaker. Após 5 falhas, o CB abre e retorna FALHA_TRANSITORIA (fallback) imediatamente."
 					}
@@ -482,7 +485,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"sku\": \"ABC-123\",\n  \"quantidade\": 1,\n  \"valor\": 199.90,\n  \"cepDestino\": \"01310-100\"\n}"
+							"raw": "{\n  \"items\": [\n    {\n      \"sku\": \"ABC-123\",\n      \"quantidade\": 1,\n      \"valor\": 199.90\n    }\n  ],\n  \"cepDestino\": \"01310-100\"\n}"
 						},
 						"description": "Após pagamento aprovado, vendas-service publica evento PedidoCriado no Kafka. Verifique os logs de transportadora-service e notificacao-service."
 					}
