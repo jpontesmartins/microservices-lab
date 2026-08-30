@@ -57,6 +57,7 @@ public class PedidoService {
         for (ItemPedidoRequest itemReq : request.items()) {
             pedido.adicionarItem(ItemPedido.criar(itemReq.sku(), itemReq.quantidade(), itemReq.valor()));
         }
+        pedidoRepository.salvar(pedido);
 
         // === Etapa 1: Reserva de Estoque (por item) ===
         for (ItemPedido item : pedido.getItems()) {
@@ -70,12 +71,14 @@ public class PedidoService {
                 log.warn("Reserva de estoque falhou por erro de negocio (pedidoId={}, sku={}, status={}, causa={})",
                         pedidoId, item.getSku(), pedido.getStatus(),
                         ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "desconhecida");
+                pedidoRepository.salvar(pedido);
                 return toResponse(pedido);
             }
 
             if (reserva == null || "FALHA_TRANSITORIA".equals(reserva.status())) {
                 pedido.marcarFalha(StatusPedido.FALHA_TRANSITORIA);
                 log.warn("Reserva de estoque nao concluida (pedidoId={}, sku={}, causa=null)", pedidoId, item.getSku());
+                pedidoRepository.salvar(pedido);
                 return toResponse(pedido);
             }
             item.reservarEstoque(reserva.reservaId());
@@ -83,6 +86,7 @@ public class PedidoService {
                     item.getReservaId());
         }
         pedido.reservarEstoque("");
+        pedidoRepository.salvar(pedido);
         log.info("Todos os itens reservados com sucesso (pedidoId={}, status={})", pedidoId, pedido.getStatus());
 
         // === Etapa 2: Calculo de Frete (por item) ===
@@ -99,6 +103,7 @@ public class PedidoService {
                         pedidoId, item.getSku(), pedido.getStatus(),
                         ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "desconhecida");
                 compensarEstoque(pedido);
+                pedidoRepository.salvar(pedido);
                 return toResponse(pedido);
             }
 
@@ -106,6 +111,7 @@ public class PedidoService {
                 pedido.marcarFalha(StatusPedido.FALHA_TRANSITORIA);
                 log.warn("Calculo de frete nao concluido (pedidoId={}, sku={}, causa=null)", pedidoId, item.getSku());
                 compensarEstoque(pedido);
+                pedidoRepository.salvar(pedido);
                 return toResponse(pedido);
             }
             item.calcularFrete(frete.freteId(), frete.valorFrete(), frete.prazoEntrega());
@@ -113,6 +119,7 @@ public class PedidoService {
                     pedidoId, item.getSku(), item.getFreteId(), item.getValorFrete(), item.getPrazoEntrega());
         }
         pedido.calcularFrete();
+        pedidoRepository.salvar(pedido);
         log.info("Frete calculado para todos os itens (pedidoId={}, status={})", pedidoId, pedido.getStatus());
 
         // === Etapa 3: Processamento de Pagamento ===
@@ -129,6 +136,7 @@ public class PedidoService {
                     pedidoId, pedido.getStatus(),
                     ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "desconhecida");
             compensarEstoqueEFrete(pedido);
+            pedidoRepository.salvar(pedido);
             return toResponse(pedido);
         }
 
@@ -136,6 +144,7 @@ public class PedidoService {
             pedido.marcarFalha(StatusPedido.FALHA_TRANSITORIA);
             log.warn("Pagamento nao concluido (pedidoId={}, causa=null)", pedidoId);
             compensarEstoqueEFrete(pedido);
+            pedidoRepository.salvar(pedido);
             return toResponse(pedido);
         }
 

@@ -39,5 +39,5 @@ logging:
 pagamento:
   # Ajuste para forcar erros e observar o circuit breaker do vendas-service abrindo.
   # valor de 0 (nenhum) a 1 (100%).
-  failRate: 0
+  failRate: 0.1
   delayMs: 0

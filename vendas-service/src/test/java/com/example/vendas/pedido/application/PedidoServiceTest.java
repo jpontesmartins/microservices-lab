@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -91,7 +92,7 @@ class PedidoServiceTest {
             verify(integracoes).reservarEstoque(anyString(), eq("SKU-ABC"), eq(2));
             verify(integracoes).calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"));
             verify(integracoes).processarPagamento(anyString(), eq(261.0));
-            verify(pedidoRepository).salvar(any());
+            verify(pedidoRepository, times(4)).salvar(any());
             verify(eventoPublicacao).publicarPedidoCriado(any());
         }
 
@@ -126,7 +127,7 @@ class PedidoServiceTest {
             assertThat(response.valorFreteTotal()).isEqualTo(30.0);
 
             verify(integracoes).processarPagamento(anyString(), eq(321.0));
-            verify(pedidoRepository).salvar(any());
+            verify(pedidoRepository, times(4)).salvar(any());
             verify(eventoPublicacao).publicarPedidoCriado(any());
         }
 
@@ -141,7 +142,7 @@ class PedidoServiceTest {
             assertThat(response.status()).isEqualTo("FALHA_ESTOQUE");
             verify(integracoes, never()).calcularFrete(anyString(), anyString(), anyInt(), anyString());
             verify(integracoes, never()).processarPagamento(anyString(), anyDouble());
-            verify(pedidoRepository, never()).salvar(any());
+            verify(pedidoRepository, times(2)).salvar(any());
             verify(eventoPublicacao, never()).publicarPedidoCriado(any());
         }
 
