@@ -28,6 +28,7 @@ spring:
       value-serializer: io.confluent.kafka.serializers.json.KafkaJsonSchemaSerializer
       properties:
         schema.registry.url: ${SCHEMA_REGISTRY_URL:http://localhost:8087}
+        json.value.type: com.example.vendas.pedido.infrastructure.dto.PedidoCriadoEvent
 
 server:
   port: 8081
