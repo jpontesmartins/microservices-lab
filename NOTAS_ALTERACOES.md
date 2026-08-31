@@ -18,6 +18,16 @@ O `PedidoCriadoEvent` publicado pelo `vendas-service` tinha formato completament
 
 O formato canônico do evento e definido em um arquivo JSON Schema (`schemas/pedido-criado-event.json`) que serve como contrato unico entre producer e consumers.
 
+### Decisao: trusted.packages
+
+O `spring.json.trusted.packages` e um mecanismo de seguranca do Spring Kafka que valida o header `__TypeId__` (pacote da classe Java) na deserializacao. Neste projeto, **nao e necessario** porque:
+
+1. **Producer desabilita type headers:** `spring.json.add.type.headers: false` + `spring.json.skip.type.headers: true`
+2. **Sem `__TypeId__` no header**, o `JsonDeserializer` usa o tipo Java passado no construtor (`PedidoCriadoEvent.class`) — nao depende de pacotes.
+3. **Schema Registry** gerencia o schema via ID, nao via nome de classe.
+
+Se no futuro o producer voltar a enviar type headers, os consumers devem confiar no pacote do producer (`com.example.vendas.pedido.infrastructure.dto`) **e** no proprio pacote.
+
 ---
 
 ## Arquivos Alterados
@@ -39,7 +49,7 @@ O formato canônico do evento e definido em um arquivo JSON Schema (`schemas/ped
 | Arquivo | Alteracao |
 |---|---|
 | `pom.xml` | Adicionadas dependencias: `kafka-schema-registry-client` (7.5.0), `json-schema-validator` (1.5.1, test) |
-| `application.yml` | Adicionados `spring.json.trusted.packages` e `schema.registry.url` |
+| `application.yml` | Adicionados `spring.json.skip.type.headers: true`, `spring.json.add.type.headers: false` e `schema.registry.url`. **Sem trusted.packages** (producer nao envia type headers). |
 | `PedidoCriadoEvent.java` | **Nao alterado** — ja tinha o formato correto |
 | `src/test/.../PedidoCriadoEventSchemaTest.java` | **Novo** — 10 testes validando schema |
 | `src/test/.../ProducerConsumerCompatibilityTest.java` | **Novo** — 4 testes de compatibilidade cross-service |
@@ -50,10 +60,10 @@ O formato canônico do evento e definido em um arquivo JSON Schema (`schemas/ped
 | Arquivo | Alteracao |
 |---|---|
 | `pom.xml` | Adicionadas dependencias: `kafka-schema-registry-client` (7.5.0), `json-schema-validator` (1.5.1, test) |
-| `application.yml` | Adicionados `spring.json.trusted.packages` e `schema.registry.url` |
+| `application.yml` | Adicionado `schema.registry.url`. **Sem trusted.packages** (producer nao envia type headers). |
 | `PedidoCriadoEvent.java` | **Reescrito** — de `{sku, quantidade, valor}` para `{items: [{sku,quantidade,valorUnitario,subtotal}], valorTotal, valorFreteTotal}` |
 | `PedidoCriadoConsumer.java` | **Reescrito** — logica de log atualizada para iterar `items` |
-| `KafkaConfig.java` | Adicionados `spring.json.trusted.packages` e `schema.registry.url` |
+| `KafkaConfig.java` | Adicionado `schema.registry.url`. **Removido trusted.packages** (producer nao envia type headers). |
 | `src/test/.../PedidoCriadoEventSchemaTest.java` | **Novo** — 5 testes validando schema |
 | `src/test/resources/schemas/pedido-criado-event.json` | **Novo** — copia do schema para testes |
 
@@ -62,10 +72,10 @@ O formato canônico do evento e definido em um arquivo JSON Schema (`schemas/ped
 | Arquivo | Alteracao |
 |---|---|
 | `pom.xml` | Adicionadas dependencias: `kafka-schema-registry-client` (7.5.0), `json-schema-validator` (1.5.1, test) |
-| `application.yml` | Adicionados `spring.json.trusted.packages` e `schema.registry.url` |
+| `application.yml` | Adicionado `schema.registry.url`. **Sem trusted.packages** (producer nao envia type headers). |
 | `PedidoCriadoEvent.java` | **Reescrito** — de `{sku, quantidade, valor}` para `{items: [{sku,quantidade,valorUnitario,subtotal}], valorTotal, valorFreteTotal}` |
 | `PedidoCriadoConsumer.java` | **Reescrito** — logica de log atualizada para iterar `items` |
-| `KafkaConfig.java` | Adicionados `spring.json.trusted.packages` e `schema.registry.url` |
+| `KafkaConfig.java` | Adicionado `schema.registry.url`. **Removido trusted.packages** (producer nao envia type headers). |
 | `src/test/.../PedidoCriadoEventSchemaTest.java` | **Novo** — 6 testes validando schema |
 | `src/test/resources/schemas/pedido-criado-event.json` | **Novo** — copia do schema para testes |
 

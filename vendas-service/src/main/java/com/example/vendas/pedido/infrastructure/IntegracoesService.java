@@ -111,7 +111,14 @@ public class IntegracoesService implements IntegracoesPort {
     }
 
     private static boolean isBusinessError(Throwable t) {
-        return t instanceof FeignException fe && fe.status() >= 400 && fe.status() < 500;
+        Throwable current = t;
+        while (current != null) {
+            if (current instanceof FeignException fe && fe.status() >= 400 && fe.status() < 500) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     @Override

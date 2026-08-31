@@ -1,5 +1,6 @@
 package com.example.vendas.pedido.infrastructure.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
@@ -15,14 +16,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Testes de validacao de schema do evento PedidoCriadoEvent.
- *
- * <p>Garante que o formato do evento publicado pelo vendas-service
- * esta em conformidade com o schema canônico definido em
- * schemas/pedido-criado-event.json. Qualquer alteracao no formato
- * do evento que viole o schema fara estes testes falharem.</p>
- */
 class PedidoCriadoEventSchemaTest {
 
     private JsonSchema schema;
@@ -37,6 +30,11 @@ class PedidoCriadoEventSchemaTest {
         schema = factory.getSchema(schemaStream);
     }
 
+    private Set<ValidationMessage> validate(String json) throws Exception {
+        JsonNode node = objectMapper.readTree(json);
+        return schema.validate(node);
+    }
+
     @Test
     @DisplayName("evento valido deve passar na validacao do schema")
     void eventoValidoDevePassarNaValidacao() throws Exception {
@@ -49,7 +47,7 @@ class PedidoCriadoEventSchemaTest {
         );
 
         String json = objectMapper.writeValueAsString(event);
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isEmpty();
     }
@@ -70,7 +68,7 @@ class PedidoCriadoEventSchemaTest {
         );
 
         String json = objectMapper.writeValueAsString(event);
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isEmpty();
     }
@@ -87,7 +85,7 @@ class PedidoCriadoEventSchemaTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isNotEmpty();
         assertThat(errors.toString()).contains("pedidoId");
@@ -105,7 +103,7 @@ class PedidoCriadoEventSchemaTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isNotEmpty();
         assertThat(errors.toString()).contains("items");
@@ -124,7 +122,7 @@ class PedidoCriadoEventSchemaTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isNotEmpty();
     }
@@ -142,7 +140,7 @@ class PedidoCriadoEventSchemaTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isNotEmpty();
     }
@@ -160,7 +158,7 @@ class PedidoCriadoEventSchemaTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isNotEmpty();
         assertThat(errors.toString()).contains("sku");
@@ -179,7 +177,7 @@ class PedidoCriadoEventSchemaTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isNotEmpty();
     }
@@ -198,14 +196,14 @@ class PedidoCriadoEventSchemaTest {
         String json = objectMapper.writeValueAsString(event)
                 .replace("}", ", \"campoExtra\": \"nao permitido\"}");
 
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isNotEmpty();
     }
 
     @Test
     @DisplayName("formato antigo (incompativel) deve falhar na validacao")
-    void formatoAntigoIncompativelDeveFalhar() {
+    void formatoAntigoIncompativelDeveFalhar() throws Exception {
         String formatoAntigo = """
                 {
                   "pedidoId": "pedido-001",
@@ -216,7 +214,7 @@ class PedidoCriadoEventSchemaTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(formatoAntigo);
+        Set<ValidationMessage> errors = validate(formatoAntigo);
 
         assertThat(errors).isNotEmpty();
     }

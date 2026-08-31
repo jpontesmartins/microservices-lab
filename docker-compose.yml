@@ -50,13 +50,13 @@ services:
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8087
     ports:
-      - "8081:8081"
+      - "8087:8087"
     networks:
       - ms-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
+      test: ["CMD", "curl", "-f", "http://localhost:8087/subjects"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -73,7 +73,7 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8087
     networks:
       - ms-net
 
@@ -127,7 +127,7 @@ services:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8087
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vendas:5432/vendas
       - SPRING_DATASOURCE_USERNAME=vendas
       - SPRING_DATASOURCE_PASSWORD=vendas
@@ -205,7 +205,7 @@ services:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8087
     ports:
       - "8085:8085"
     networks:
@@ -227,7 +227,7 @@ services:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8087
     ports:
       - "8086:8086"
     networks:

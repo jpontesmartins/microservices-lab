@@ -1,7 +1,7 @@
 package com.example.vendas.pedido.infrastructure.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
@@ -16,22 +16,10 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Testes de compatibilidade entre producer (vendas-service) e consumers
- * (transportadora-service, notificacao-service).
- *
- * <p>Valida que o JSON produzido pelo vendas-service via JsonSerializer
- * (com headers de tipo) esta em conformidade com o schema canônico que
- * os consumers esperam. Simula exatamente o que acontece em producao:
- * vendas serializa -> Kafka transporta -> consumer deserializa.</p>
- */
 class ProducerConsumerCompatibilityTest {
 
     private JsonSchema schema;
-    private final ObjectMapper objectMapper = ObjectMapper.builder()
-            .findAndAddModules()
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .build();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() throws Exception {
@@ -40,6 +28,11 @@ class ProducerConsumerCompatibilityTest {
 
         JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
         schema = factory.getSchema(schemaStream);
+    }
+
+    private Set<ValidationMessage> validate(String json) throws Exception {
+        JsonNode node = objectMapper.readTree(json);
+        return schema.validate(node);
     }
 
     @Test
@@ -57,7 +50,7 @@ class ProducerConsumerCompatibilityTest {
         );
 
         String jsonDoProducer = objectMapper.writeValueAsString(event);
-        Set<ValidationMessage> errors = schema.validate(jsonDoProducer);
+        Set<ValidationMessage> errors = validate(jsonDoProducer);
 
         assertThat(errors)
                 .withFailMessage("JSON produzido pelo vendas-service viola o schema canônico: %s", errors)
@@ -96,8 +89,7 @@ class ProducerConsumerCompatibilityTest {
         );
 
         String json = objectMapper.writeValueAsString(original);
-
-        schema.validate(json);
+        validate(json);
 
         PedidoCriadoEvent deserializado = objectMapper.readValue(json, PedidoCriadoEvent.class);
 
@@ -114,7 +106,7 @@ class ProducerConsumerCompatibilityTest {
 
     @Test
     @DisplayName("JSON com campos incompativeis deve falhar (simula bug de formato)")
-    void jsonComCamposIncompativeisDeveFalhar() {
+    void jsonComCamposIncompativeisDeveFalhar() throws Exception {
         String jsonIncompativel = """
                 {
                   "pedidoId": "pedido-001",
@@ -125,7 +117,7 @@ class ProducerConsumerCompatibilityTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(jsonIncompativel);
+        Set<ValidationMessage> errors = validate(jsonIncompativel);
 
         assertThat(errors).isNotEmpty();
         assertThat(errors.size()).isGreaterThanOrEqualTo(3);

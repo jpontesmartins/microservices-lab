@@ -1,5 +1,6 @@
 package com.example.notificacao.core.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
@@ -15,14 +16,6 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Testes de validacao de schema do evento PedidoCriadoEvent.
- *
- * <p>Garante que o formato do evento consumido pelo notificacao-service
- * esta em conformidade com o schema canônico definido em
- * schemas/pedido-criado-event.json. Se o vendas-service alterar o formato
- * do evento, estes testes falharam antes de chegar em producao.</p>
- */
 class PedidoCriadoEventSchemaTest {
 
     private JsonSchema schema;
@@ -37,6 +30,11 @@ class PedidoCriadoEventSchemaTest {
         schema = factory.getSchema(schemaStream);
     }
 
+    private Set<ValidationMessage> validate(String json) throws Exception {
+        JsonNode node = objectMapper.readTree(json);
+        return schema.validate(node);
+    }
+
     @Test
     @DisplayName("evento com formato canonico deve passar na validacao")
     void eventoComFormatoCanonicoDevePassar() throws Exception {
@@ -49,7 +47,7 @@ class PedidoCriadoEventSchemaTest {
         );
 
         String json = objectMapper.writeValueAsString(event);
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isEmpty();
     }
@@ -83,7 +81,7 @@ class PedidoCriadoEventSchemaTest {
 
     @Test
     @DisplayName("formato antigo (incompativel) deve falhar na validacao")
-    void formatoAntigoIncompativelDeveFalhar() {
+    void formatoAntigoIncompativelDeveFalhar() throws Exception {
         String formatoAntigo = """
                 {
                   "pedidoId": "pedido-001",
@@ -94,14 +92,14 @@ class PedidoCriadoEventSchemaTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(formatoAntigo);
+        Set<ValidationMessage> errors = validate(formatoAntigo);
 
         assertThat(errors).isNotEmpty();
     }
 
     @Test
     @DisplayName("evento sem valorFreteTotal deve falhar")
-    void eventoSemValorFreteTotalDeveFalhar() {
+    void eventoSemValorFreteTotalDeveFalhar() throws Exception {
         String json = """
                 {
                   "pedidoId": "pedido-001",
@@ -111,7 +109,7 @@ class PedidoCriadoEventSchemaTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isNotEmpty();
         assertThat(errors.toString()).contains("valorFreteTotal");
@@ -119,7 +117,7 @@ class PedidoCriadoEventSchemaTest {
 
     @Test
     @DisplayName("evento com item com quantidade negativa deve falhar")
-    void eventoComQuantidadeNegativaDeveFalhar() {
+    void eventoComQuantidadeNegativaDeveFalhar() throws Exception {
         String json = """
                 {
                   "pedidoId": "pedido-001",
@@ -130,7 +128,7 @@ class PedidoCriadoEventSchemaTest {
                 }
                 """;
 
-        Set<ValidationMessage> errors = schema.validate(json);
+        Set<ValidationMessage> errors = validate(json);
 
         assertThat(errors).isNotEmpty();
     }

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "br.com.vendas.event.pedido-criado-v1",
+  "$id": "urn:br.com.vendas:pedido-criado-event:v1",
   "title": "PedidoCriadoEvent",
   "description": "Evento publicado apos confirmacao de pagamento de um pedido. Formato canônico utilizado por todos os consumers do topico pedido-criado.",
   "type": "object",
