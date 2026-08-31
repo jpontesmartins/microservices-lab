@@ -42,6 +42,8 @@ public class KafkaConfig {
         props.put("group.id", "notificacao-group");
         props.put("auto.offset.reset", "earliest");
         props.put("key.deserializer", StringDeserializer.class);
+        props.put("spring.json.trusted.packages", "com.example.notificacao.core.dto");
+        props.put("schema.registry.url", System.getenv().getOrDefault("SCHEMA_REGISTRY_URL", "http://localhost:8081"));
 
         JsonDeserializer<PedidoCriadoEvent> jsonDeserializer =
                 new JsonDeserializer<>(PedidoCriadoEvent.class, false);

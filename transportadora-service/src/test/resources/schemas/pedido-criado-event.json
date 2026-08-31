@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "br.com.vendas.event.pedido-criado-v1",
+  "title": "PedidoCriadoEvent",
+  "description": "Evento publicado apos confirmacao de pagamento de um pedido. Formato canônico utilizado por todos os consumers do topico pedido-criado.",
+  "type": "object",
+  "properties": {
+    "pedidoId": {
+      "type": "string",
+      "description": "Identificador unico do pedido (UUID)"
+    },
+    "items": {
+      "type": "array",
+      "description": "Lista de itens do pedido",
+      "items": {
+        "$ref": "#/definitions/ItemEvent"
+      },
+      "minItems": 1
+    },
+    "valorTotal": {
+      "type": "number",
+      "description": "Valor total do pedido (itens + frete)",
+      "minimum": 0
+    },
+    "valorFreteTotal": {
+      "type": "number",
+      "description": "Valor total do frete",
+      "minimum": 0
+    },
+    "cepDestino": {
+      "type": "string",
+      "description": "CEP de destino no formato XXXXX-XXX",
+      "pattern": "^[0-9]{5}-[0-9]{3}$"
+    }
+  },
+  "required": ["pedidoId", "items", "valorTotal", "valorFreteTotal", "cepDestino"],
+  "additionalProperties": false,
+  "definitions": {
+    "ItemEvent": {
+      "type": "object",
+      "properties": {
+        "sku": {
+          "type": "string",
+          "description": "Codigo SKU do item"
+        },
+        "quantidade": {
+          "type": "integer",
+          "description": "Quantidade solicitada",
+          "minimum": 1
+        },
+        "valorUnitario": {
+          "type": "number",
+          "description": "Valor unitario do item",
+          "minimum": 0
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "Subtotal (quantidade * valorUnitario)",
+          "minimum": 0
+        }
+      },
+      "required": ["sku", "quantidade", "valorUnitario", "subtotal"],
+      "additionalProperties": false
+    }
+  }
+}

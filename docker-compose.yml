@@ -41,15 +41,39 @@ services:
       timeout: 10s
       retries: 10
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    ports:
+      - "8081:8081"
+    networks:
+      - ms-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
+    depends_on:
+      schema-registry:
+        condition: service_healthy
     ports:
       - "8089:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
     networks:
       - ms-net
 
@@ -95,12 +119,15 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      schema-registry:
+        condition: service_healthy
       postgres-vendas:
         condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vendas:5432/vendas
       - SPRING_DATASOURCE_USERNAME=vendas
       - SPRING_DATASOURCE_PASSWORD=vendas
@@ -172,10 +199,13 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      schema-registry:
+        condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
     ports:
       - "8085:8085"
     networks:
@@ -191,10 +221,13 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      schema-registry:
+        condition: service_healthy
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
     ports:
       - "8086:8086"
     networks:

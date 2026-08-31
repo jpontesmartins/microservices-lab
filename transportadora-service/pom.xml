@@ -57,6 +57,21 @@
             <artifactId>spring-kafka</artifactId>
         </dependency>
 
+        <!-- Confluent Schema Registry client -->
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-schema-registry-client</artifactId>
+            <version>7.5.0</version>
+        </dependency>
+
+        <!-- JSON Schema validator (testes de compatibilidade de schema) -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.5.1</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Monitoramento de saude e metricas base (Actuator) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

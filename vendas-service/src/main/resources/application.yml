@@ -28,6 +28,8 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: false
+        spring.json.trusted.packages: "com.example.vendas.pedido.infrastructure.dto"
+        schema.registry.url: ${SCHEMA_REGISTRY_URL:http://localhost:8081}
 
 server:
   port: 8081
