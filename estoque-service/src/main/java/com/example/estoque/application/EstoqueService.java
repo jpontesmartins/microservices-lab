@@ -50,7 +50,7 @@ public class EstoqueService {
         String skuFinal = sku.trim();
         log.info("Processando reserva de estoque (pedidoId={}, sku={}, quantidade={})", pedidoId, skuFinal, quantidade);
 
-        ItemEstoque item = itemRepository.buscarPorSku(skuFinal)
+        ItemEstoque item = itemRepository.buscarPorSkuComLock(skuFinal)
                 .orElseThrow(() -> {
                     log.warn("SKU desconhecido informado na reserva (pedidoId={}, sku={})", pedidoId, skuFinal);
                     return new SkuDesconhecidoException(skuFinal);
@@ -87,7 +87,7 @@ public class EstoqueService {
         String sku = reserva.getSku();
         int quantidade = reserva.getQuantidade();
 
-        itemRepository.buscarPorSku(sku).ifPresent(item -> {
+        itemRepository.buscarPorSkuComLock(sku).ifPresent(item -> {
             item.incrementar(quantidade);
             itemRepository.salvar(item);
         });

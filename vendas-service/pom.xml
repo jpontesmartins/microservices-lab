@@ -20,6 +20,13 @@
         <spring.cloud.version>2023.0.1</spring.cloud.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -57,12 +64,6 @@
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
 
-        <!-- circuit breaker -->
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
-        </dependency>
-
         <!-- retry -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>
@@ -73,6 +74,28 @@
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Confluent Schema Registry client (produzir/consumir com schema) -->
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-schema-registry-client</artifactId>
+            <version>7.5.0</version>
+        </dependency>
+
+        <!-- Confluent JSON Schema Serializer/Deserializer -->
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-json-schema-serializer</artifactId>
+            <version>7.5.0</version>
+        </dependency>
+
+        <!-- JSON Schema validator (testes de compatibilidade de schema) -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.5.1</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- quem que usa essa lib? -->
@@ -101,6 +124,12 @@
         <dependency>
             <groupId>io.zipkin.reporter2</groupId>
             <artifactId>zipkin-reporter-brave</artifactId>
+        </dependency>
+
+        <!-- Feign + Micrometer: propaga trace context (B3 headers) nas chamadas HTTP -->
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-micrometer</artifactId>
         </dependency>
 
         <!-- JPA, persistencia -->

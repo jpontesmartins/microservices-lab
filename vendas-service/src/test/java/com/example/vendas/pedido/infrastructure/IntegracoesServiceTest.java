@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletionException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -108,6 +109,18 @@ class IntegracoesServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("FALHA_ESTOQUE");
         }
+
+        @Test
+        @DisplayName("deve lancar BusinessException quando FeignException 4xx esta envolvida em CompletionException")
+        void deveLancarBusinessExceptionQuandoFeignExceptionEstaEnvolvidaEmCompletionException() {
+            FeignException businessError = feignExceptionWithStatus(409);
+            CompletionException wrapped = new CompletionException(businessError);
+
+            assertThatThrownBy(() -> integracoesService.reservaFallback(
+                    "pedido-001", "SKU-ABC", 2, wrapped))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("FALHA_ESTOQUE");
+        }
     }
 
     @Nested
@@ -152,6 +165,18 @@ class IntegracoesServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("FALHA_FRETE");
         }
+
+        @Test
+        @DisplayName("deve lancar BusinessException quando FeignException 4xx de frete esta envolvida em CompletionException")
+        void deveLancarBusinessExceptionQuandoFeignExceptionFreteEstaEnvolvidaEmCompletionException() {
+            FeignException businessError = feignExceptionWithStatus(400);
+            CompletionException wrapped = new CompletionException(businessError);
+
+            assertThatThrownBy(() -> integracoesService.freteFallback(
+                    "pedido-001", "SKU-ABC", 2, "01310-100", wrapped))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("FALHA_FRETE");
+        }
     }
 
     @Nested
@@ -191,6 +216,18 @@ class IntegracoesServiceTest {
 
             assertThatThrownBy(() -> integracoesService.pagamentoFallback(
                     "pedido-001", 140.50, businessError))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("FALHA_PAGAMENTO");
+        }
+
+        @Test
+        @DisplayName("deve lancar BusinessException quando FeignException 4xx de pagamento esta envolvida em CompletionException")
+        void deveLancarBusinessExceptionQuandoFeignExceptionPagamentoEstaEnvolvidaEmCompletionException() {
+            FeignException businessError = feignExceptionWithStatus(400);
+            CompletionException wrapped = new CompletionException(businessError);
+
+            assertThatThrownBy(() -> integracoesService.pagamentoFallback(
+                    "pedido-001", 140.50, wrapped))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("FALHA_PAGAMENTO");
         }

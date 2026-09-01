@@ -3,6 +3,9 @@ spring:
     name: notificacao-service
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      properties:
+        schema.registry.url: ${SCHEMA_REGISTRY_URL:http://localhost:8087}
 
 server:
   port: 8086

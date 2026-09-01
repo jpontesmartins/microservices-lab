@@ -37,7 +37,8 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
                 pedido.getCepDestino(),
                 pedido.getStatus(),
                 pedido.getCriadoEm(),
-                pedido.getTransacaoId());
+                pedido.getTransacaoId(),
+                pedido.getMensagemErro());
 
         for (ItemPedido item : pedido.getItems()) {
             PedidoItemEntity itemEntity = new PedidoItemEntity(
@@ -61,7 +62,7 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
                 entity.getCepDestino());
 
         if (entity.getStatus() != StatusPedido.CRIADO) {
-            pedido.marcarFalha(entity.getStatus());
+            pedido.marcarFalha(entity.getStatus(), entity.getMensagemErro());
         }
 
         for (PedidoItemEntity itemEntity : entity.getItems()) {

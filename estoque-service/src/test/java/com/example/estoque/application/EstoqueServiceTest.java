@@ -79,7 +79,7 @@ class EstoqueServiceTest {
         @Test
         @DisplayName("deve reservar estoque com sucesso")
         void deveReservarEstoqueComSucesso() {
-            when(itemRepository.buscarPorSku("ABC-123")).thenReturn(Optional.of(teclado));
+            when(itemRepository.buscarPorSkuComLock("ABC-123")).thenReturn(Optional.of(teclado));
             when(itemRepository.salvar(any(ItemEstoque.class))).thenReturn(teclado);
             when(reservaRepository.salvar(any(ReservaEstoque.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -96,7 +96,7 @@ class EstoqueServiceTest {
         @Test
         @DisplayName("deve decrementar estoque apos reserva")
         void deveDecrementarEstoqueAposReserva() {
-            when(itemRepository.buscarPorSku("ABC-123")).thenReturn(Optional.of(teclado));
+            when(itemRepository.buscarPorSkuComLock("ABC-123")).thenReturn(Optional.of(teclado));
             when(itemRepository.salvar(any(ItemEstoque.class))).thenReturn(teclado);
             when(reservaRepository.salvar(any(ReservaEstoque.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -133,7 +133,7 @@ class EstoqueServiceTest {
         @Test
         @DisplayName("deve lancar excecao quando SKU e desconhecido")
         void deveLancarExcecaoQuandoSkuEDesconhecido() {
-            when(itemRepository.buscarPorSku("SKU-INVALIDO")).thenReturn(Optional.empty());
+            when(itemRepository.buscarPorSkuComLock("SKU-INVALIDO")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> estoqueService.reservar("pedido-001", "SKU-INVALIDO", 1))
                     .isInstanceOf(SkuDesconhecidoException.class)
@@ -143,7 +143,7 @@ class EstoqueServiceTest {
         @Test
         @DisplayName("deve lancar excecao quando estoque e insuficiente")
         void deveLancarExcecaoQuandoEstoqueEInsuficiente() {
-            when(itemRepository.buscarPorSku("ABC-123")).thenReturn(Optional.of(teclado));
+            when(itemRepository.buscarPorSkuComLock("ABC-123")).thenReturn(Optional.of(teclado));
 
             assertThatThrownBy(() -> estoqueService.reservar("pedido-001", "ABC-123", 100))
                     .isInstanceOf(EstoqueInsuficienteException.class)
@@ -160,7 +160,7 @@ class EstoqueServiceTest {
         void deveCancelarReservaERestaurarEstoque() {
             ReservaEstoque reserva = new ReservaEstoque("reserva-001", "ABC-123", 10, "pedido-001");
             when(reservaRepository.buscarPorId("reserva-001")).thenReturn(Optional.of(reserva));
-            when(itemRepository.buscarPorSku("ABC-123")).thenReturn(Optional.of(teclado));
+            when(itemRepository.buscarPorSkuComLock("ABC-123")).thenReturn(Optional.of(teclado));
             when(itemRepository.salvar(any(ItemEstoque.class))).thenReturn(teclado);
 
             boolean ok = estoqueService.cancelarReserva("reserva-001");

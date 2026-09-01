@@ -6,23 +6,19 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-/**
- * Consumer que escuta a topic "pedido-criado" no Kafka.
- * Responsável por processar o envio de pacotes após pagamento confirmado.
- */
+import java.util.stream.Collectors;
+
 @Component
 public class PedidoCriadoConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(PedidoCriadoConsumer.class);
 
-    /**
-     * Escuta mensagens da topic "pedido-criado" e processa o envio do pacote.
-     *
-     * @param event dados do pedido criado e pago
-     */
     @KafkaListener(topics = "pedido-criado", groupId = "transportadora-group")
     public void onPedidoCriado(PedidoCriadoEvent event) {
-        log.info("Pedido sendo processado pela transportadora (pedidoId={}, sku={}, cepDestino={})",
-                event.pedidoId(), event.sku(), event.cepDestino());
+        String skus = event.items().stream()
+                .map(i -> i.sku() + " x" + i.quantidade())
+                .collect(Collectors.joining(", "));
+        log.info("Pedido sendo processado pela transportadora (pedidoId={}, itens={}, valorTotal={}, cepDestino={})",
+                event.pedidoId(), skus, event.valorTotal(), event.cepDestino());
     }
 }

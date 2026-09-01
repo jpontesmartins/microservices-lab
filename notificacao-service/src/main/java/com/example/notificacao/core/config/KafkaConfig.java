@@ -10,7 +10,7 @@ import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
+import io.confluent.kafka.serializers.json.KafkaJsonSchemaDeserializer;
 import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
@@ -42,9 +42,11 @@ public class KafkaConfig {
         props.put("group.id", "notificacao-group");
         props.put("auto.offset.reset", "earliest");
         props.put("key.deserializer", StringDeserializer.class);
+        props.put("schema.registry.url", System.getenv().getOrDefault("SCHEMA_REGISTRY_URL", "http://localhost:8087"));
+        props.put("json.value.type", PedidoCriadoEvent.class.getName());
 
-        JsonDeserializer<PedidoCriadoEvent> jsonDeserializer =
-                new JsonDeserializer<>(PedidoCriadoEvent.class, false);
+        KafkaJsonSchemaDeserializer jsonDeserializer =
+                new KafkaJsonSchemaDeserializer();
 
         return new DefaultKafkaConsumerFactory<>(props,
                 new StringDeserializer(),

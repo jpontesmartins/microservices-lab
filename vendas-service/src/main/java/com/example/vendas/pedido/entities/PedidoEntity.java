@@ -34,6 +34,9 @@ public class PedidoEntity {
     @Column(name = "transacao_id")
     private String transacaoId;
 
+    @Column(name = "mensagem_erro")
+    private String mensagemErro;
+
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PedidoItemEntity> items = new ArrayList<>();
 
@@ -42,12 +45,13 @@ public class PedidoEntity {
 
     public PedidoEntity(String pedidoId, String cepDestino,
             com.example.vendas.pedido.domain.model.StatusPedido status, Instant criadoEm,
-            String transacaoId) {
+            String transacaoId, String mensagemErro) {
         this.pedidoId = pedidoId;
         this.cepDestino = cepDestino;
         this.status = status;
         this.criadoEm = criadoEm;
         this.transacaoId = transacaoId;
+        this.mensagemErro = mensagemErro;
     }
 
     public void addItem(PedidoItemEntity item) {
@@ -73,6 +77,10 @@ public class PedidoEntity {
 
     public String getTransacaoId() {
         return transacaoId;
+    }
+
+    public String getMensagemErro() {
+        return mensagemErro;
     }
 
     public List<PedidoItemEntity> getItems() {

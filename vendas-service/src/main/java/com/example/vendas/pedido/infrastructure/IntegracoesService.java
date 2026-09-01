@@ -53,7 +53,7 @@ public class IntegracoesService implements IntegracoesPort {
         log.warn("Fallback de estoque acionado (pedidoId={}, sku={}, quantidade={}, causa={})",
                 pedidoId, sku, quantidade, t != null ? t.getClass().getSimpleName() : "desconhecida");
         if (isBusinessError(t)) {
-            throw new BusinessException("FALHA_ESTOQUE", t);
+            throw new BusinessException("FALHA_ESTOQUE", extractMessage(t), t);
         }
         return new ReservaEstoqueResult(null, "FALHA_TRANSITORIA");
     }
@@ -80,7 +80,7 @@ public class IntegracoesService implements IntegracoesPort {
         log.warn("Fallback de frete acionado (pedidoId={}, sku={}, quantidade={}, cepDestino={}, causa={})",
                 pedidoId, sku, quantidade, cepDestino, t != null ? t.getClass().getSimpleName() : "desconhecida");
         if (isBusinessError(t)) {
-            throw new BusinessException("FALHA_FRETE", t);
+            throw new BusinessException("FALHA_FRETE", extractMessage(t), t);
         }
         return new FreteResult(null, "FALHA_TRANSITORIA", 0.0, null);
     }
@@ -105,13 +105,49 @@ public class IntegracoesService implements IntegracoesPort {
         log.warn("Fallback de pagamento acionado (pedidoId={}, valor={}, causa={})",
                 pedidoId, valor, t != null ? t.getClass().getSimpleName() : "desconhecida");
         if (isBusinessError(t)) {
-            throw new BusinessException("FALHA_PAGAMENTO", t);
+            throw new BusinessException("FALHA_PAGAMENTO", extractMessage(t), t);
         }
         return new PagamentoResult(null, "FALHA_TRANSITORIA", valor);
     }
 
     private static boolean isBusinessError(Throwable t) {
-        return t instanceof FeignException fe && fe.status() >= 400 && fe.status() < 500;
+        Throwable current = t;
+        while (current != null) {
+            if (current instanceof FeignException fe && fe.status() >= 400 && fe.status() < 500) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private static String extractMessage(Throwable t) {
+        Throwable current = t;
+        while (current != null) {
+            if (current instanceof FeignException fe && fe.contentUTF8() != null && !fe.contentUTF8().isBlank()) {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(fe.contentUTF8());
+                    if (node.has("message") && !node.get("message").asText().isBlank()) {
+                        return node.get("message").asText();
+                    }
+                } catch (Exception ignored) {
+                }
+                return mensagemPorStatus(fe.status());
+            }
+            current = current.getCause();
+        }
+        return t != null ? t.getMessage() : null;
+    }
+
+    private static String mensagemPorStatus(int status) {
+        return switch (status) {
+            case 409 -> "Operacao conflitante. Tente novamente.";
+            case 400 -> "Dados invalidos na requisicao.";
+            case 404 -> "Recurso nao encontrado.";
+            case 503 -> "Servico temporariamente indisponivel.";
+            default -> "Erro no servico downstream (HTTP " + status + ").";
+        };
     }
 
     @Override

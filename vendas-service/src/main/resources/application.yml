@@ -25,12 +25,15 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-serializer: io.confluent.kafka.serializers.json.KafkaJsonSchemaSerializer
       properties:
-        spring.json.add.type.headers: false
+        schema.registry.url: ${SCHEMA_REGISTRY_URL:http://localhost:8087}
+        json.value.type: com.example.vendas.pedido.infrastructure.dto.PedidoCriadoEvent
 
 server:
   port: 8081
+  error:
+    include-message: always
 
 eureka:
   client:
@@ -150,5 +153,3 @@ resilience4j:
 logging:
   pattern:
     level: "%5p [%X{traceId:-},%X{spanId:-}]"
-  level:
-    io.github.resilience4j: DEBUG
