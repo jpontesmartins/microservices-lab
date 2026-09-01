@@ -14,6 +14,7 @@ import com.example.vendas.pedido.web.dto.ItemPedidoRequest;
 import com.example.vendas.pedido.web.dto.ItemPedidoResponse;
 import com.example.vendas.pedido.web.dto.PedidoResponse;
 import com.example.vendas.shared.exception.BusinessException;
+import com.example.vendas.shared.exception.TransientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -67,19 +68,19 @@ public class PedidoService {
             try {
                 reserva = integracoes.reservarEstoque(pedidoId, item.getSku(), item.getQuantidade());
             } catch (BusinessException ex) {
-                pedido.marcarFalha(StatusPedido.valueOf(ex.getStatus()));
-                log.warn("Reserva de estoque falhou por erro de negocio (pedidoId={}, sku={}, status={}, causa={})",
-                        pedidoId, item.getSku(), pedido.getStatus(),
-                        ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "desconhecida");
+                pedido.marcarFalha(StatusPedido.valueOf(ex.getStatus()), ex.getUserMessage());
                 pedidoRepository.salvar(pedido);
-                return toResponse(pedido);
+                log.warn("Reserva de estoque falhou por erro de negocio (pedidoId={}, sku={}, status={})",
+                        pedidoId, item.getSku(), ex.getStatus());
+                throw ex;
             }
 
             if (reserva == null || "FALHA_TRANSITORIA".equals(reserva.status())) {
-                pedido.marcarFalha(StatusPedido.FALHA_TRANSITORIA);
-                log.warn("Reserva de estoque nao concluida (pedidoId={}, sku={}, causa=null)", pedidoId, item.getSku());
+                String mensagem = "Servico de estoque temporariamente indisponivel";
+                pedido.marcarFalha(StatusPedido.FALHA_TRANSITORIA, mensagem);
                 pedidoRepository.salvar(pedido);
-                return toResponse(pedido);
+                log.warn("Reserva de estoque nao concluida (pedidoId={}, sku={})", pedidoId, item.getSku());
+                throw new TransientException(mensagem, null);
             }
             item.reservarEstoque(reserva.reservaId());
             log.info("Estoque reservado com sucesso (pedidoId={}, sku={}, reservaId={})", pedidoId, item.getSku(),
@@ -98,21 +99,21 @@ public class PedidoService {
                 frete = integracoes.calcularFrete(pedidoId, item.getSku(), item.getQuantidade(),
                         request.cepDestino());
             } catch (BusinessException ex) {
-                pedido.marcarFalha(StatusPedido.valueOf(ex.getStatus()));
-                log.warn("Calculo de frete falhou por erro de negocio (pedidoId={}, sku={}, status={}, causa={})",
-                        pedidoId, item.getSku(), pedido.getStatus(),
-                        ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "desconhecida");
+                pedido.marcarFalha(StatusPedido.valueOf(ex.getStatus()), ex.getUserMessage());
                 compensarEstoque(pedido);
                 pedidoRepository.salvar(pedido);
-                return toResponse(pedido);
+                log.warn("Calculo de frete falhou por erro de negocio (pedidoId={}, sku={}, status={})",
+                        pedidoId, item.getSku(), ex.getStatus());
+                throw ex;
             }
 
             if (frete == null || "FALHA_TRANSITORIA".equals(frete.status())) {
-                pedido.marcarFalha(StatusPedido.FALHA_TRANSITORIA);
-                log.warn("Calculo de frete nao concluido (pedidoId={}, sku={}, causa=null)", pedidoId, item.getSku());
+                String mensagem = "Servico de frete temporariamente indisponivel";
+                pedido.marcarFalha(StatusPedido.FALHA_TRANSITORIA, mensagem);
                 compensarEstoque(pedido);
                 pedidoRepository.salvar(pedido);
-                return toResponse(pedido);
+                log.warn("Calculo de frete nao concluido (pedidoId={}, sku={})", pedidoId, item.getSku());
+                throw new TransientException(mensagem, null);
             }
             item.calcularFrete(frete.freteId(), frete.valorFrete(), frete.prazoEntrega());
             log.info("Frete calculado com sucesso (pedidoId={}, sku={}, freteId={}, valorFrete={}, prazoEntrega={})",
@@ -131,21 +132,21 @@ public class PedidoService {
         try {
             pagamento = integracoes.processarPagamento(pedidoId, valorTotal);
         } catch (BusinessException ex) {
-            pedido.marcarFalha(StatusPedido.valueOf(ex.getStatus()));
-            log.warn("Pagamento falhou por erro de negocio (pedidoId={}, status={}, causa={})",
-                    pedidoId, pedido.getStatus(),
-                    ex.getCause() != null ? ex.getCause().getClass().getSimpleName() : "desconhecida");
+            pedido.marcarFalha(StatusPedido.valueOf(ex.getStatus()), ex.getUserMessage());
             compensarEstoqueEFrete(pedido);
             pedidoRepository.salvar(pedido);
-            return toResponse(pedido);
+            log.warn("Pagamento falhou por erro de negocio (pedidoId={}, status={})",
+                    pedidoId, ex.getStatus());
+            throw ex;
         }
 
         if (pagamento == null || "FALHA_TRANSITORIA".equals(pagamento.status())) {
-            pedido.marcarFalha(StatusPedido.FALHA_TRANSITORIA);
-            log.warn("Pagamento nao concluido (pedidoId={}, causa=null)", pedidoId);
+            String mensagem = "Servico de pagamento temporariamente indisponivel";
+            pedido.marcarFalha(StatusPedido.FALHA_TRANSITORIA, mensagem);
             compensarEstoqueEFrete(pedido);
             pedidoRepository.salvar(pedido);
-            return toResponse(pedido);
+            log.warn("Pagamento nao concluido (pedidoId={})", pedidoId);
+            throw new TransientException(mensagem, null);
         }
 
         // === Pedido Processado com Sucesso ===
@@ -168,7 +169,7 @@ public class PedidoService {
     public PedidoResponse buscar(String pedidoId) {
         log.info("Buscando pedido no repositorio (pedidoId={})", pedidoId);
         return pedidoRepository.buscarPorId(pedidoId)
-                .map(PedidoService::toResponse)
+                .map(p -> toResponse(p))
                 .orElse(null);
     }
 
@@ -222,7 +223,8 @@ public class PedidoService {
                 pedido.calcularValorTotal(),
                 pedido.calcularValorFreteTotal(),
                 pedido.getTransacaoId(),
-                pedido.getCriadoEm().toString());
+                pedido.getCriadoEm().toString(),
+                pedido.getMensagemErro());
     }
 
     private static void validar(CriarPedidoRequest request) {

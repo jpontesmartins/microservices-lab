@@ -10,6 +10,7 @@ import com.example.vendas.pedido.web.dto.CriarPedidoRequest;
 import com.example.vendas.pedido.web.dto.ItemPedidoRequest;
 import com.example.vendas.pedido.web.dto.PedidoResponse;
 import com.example.vendas.shared.exception.BusinessException;
+import com.example.vendas.shared.exception.TransientException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -132,89 +133,98 @@ class PedidoServiceTest {
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_ESTOQUE quando estoque falha com erro de negocio")
-        void deveRetornarFALHA_ESTOQUEQuandoEstoqueFalhaComErroDeNegocio() {
+        @DisplayName("deve salvar pedido e lancar BusinessException quando estoque falha com erro de negocio")
+        void deveSalvarPedidoELancarBusinessExceptionQuandoEstoqueFalhaComErroDeNegocio() {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2)))
-                    .thenThrow(new BusinessException("FALHA_ESTOQUE", null));
+                    .thenThrow(new BusinessException("FALHA_ESTOQUE", "Sem estoque para SKU ABC", null));
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido);
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex -> assertThat(((BusinessException) ex).getStatus()).isEqualTo("FALHA_ESTOQUE"));
 
-            assertThat(response.status()).isEqualTo("FALHA_ESTOQUE");
+            verify(pedidoRepository, times(2)).salvar(any());
             verify(integracoes, never()).calcularFrete(anyString(), anyString(), anyInt(), anyString());
             verify(integracoes, never()).processarPagamento(anyString(), anyDouble());
+            verify(eventoPublicacao, never()).publicarPedidoCriado(any());
+        }
+
+        @Test
+        @DisplayName("deve salvar pedido e lancar TransientException quando estoque retorna null (erro de servidor)")
+        void deveLancarTransientExceptionQuandoEstoqueRetornaNull() {
+            when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(null);
+
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido))
+                    .isInstanceOf(TransientException.class);
+
             verify(pedidoRepository, times(2)).salvar(any());
             verify(eventoPublicacao, never()).publicarPedidoCriado(any());
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_TRANSITORIA quando estoque retorna null (erro de servidor)")
-        void deveRetornarFALHA_TRANSITORIAQuandoEstoqueRetornaNull() {
-            when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(null);
-
-            PedidoResponse response = pedidoService.criarPedido(requestValido);
-
-            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
-        }
-
-        @Test
-        @DisplayName("deve retornar FALHA_TRANSITORIA quando estoque retorna resposta com status FALHA_TRANSITORIA")
-        void deveRetornarFALHA_TRANSITORIAQuandoEstoqueRetornaRespostaComFALHA_TRANSITORIA() {
+        @DisplayName("deve lancar TransientException quando estoque retorna FALHA_TRANSITORIA e salvar pedido")
+        void deveLancarTransientExceptionQuandoEstoqueRetornaRespostaComFALHA_TRANSITORIA() {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2)))
                     .thenReturn(new ReservaEstoqueResult(null, "FALHA_TRANSITORIA"));
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido);
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido))
+                    .isInstanceOf(TransientException.class);
 
-            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
+            verify(pedidoRepository, times(2)).salvar(any());
+            verify(eventoPublicacao, never()).publicarPedidoCriado(any());
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_FRETE quando frete falha com erro de negocio e compensar estoque")
-        void deveRetornarFALHA_FRETEQuandoFreteFalhaComErroDeNegocioECompensarEstoque() {
+        @DisplayName("deve salvar pedido e lancar BusinessException quando frete falha com erro de negocio e compensar estoque")
+        void deveSalvarPedidoELancarBusinessExceptionQuandoFreteFalhaComErroDeNegocioECompensarEstoque() {
             ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-001", "RESERVADO");
 
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100")))
-                    .thenThrow(new BusinessException("FALHA_FRETE", null));
+                    .thenThrow(new BusinessException("FALHA_FRETE", "CEP de destino invalido", null));
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido);
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex -> assertThat(((BusinessException) ex).getStatus()).isEqualTo("FALHA_FRETE"));
 
-            assertThat(response.status()).isEqualTo("FALHA_FRETE");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
             verify(integracoes, never()).processarPagamento(anyString(), anyDouble());
+            verify(pedidoRepository, times(3)).salvar(any());
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_TRANSITORIA quando frete retorna null (erro de servidor) e compensar estoque")
-        void deveRetornarFALHA_TRANSITORIAQuandoFreteRetornaNullECompensarEstoque() {
+        @DisplayName("deve lancar TransientException quando frete retorna null e compensar estoque")
+        void deveLancarTransientExceptionQuandoFreteRetornaNullECompensarEstoque() {
             ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-001", "RESERVADO");
 
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(null);
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido);
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido))
+                    .isInstanceOf(TransientException.class);
 
-            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
+            verify(pedidoRepository, times(3)).salvar(any());
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_TRANSITORIA quando frete retorna resposta com status FALHA_TRANSITORIA e compensar estoque")
-        void deveRetornarFALHA_TRANSITORIAQuandoFreteRetornaRespostaComFALHA_TRANSITORIA() {
+        @DisplayName("deve lancar TransientException quando frete retorna FALHA_TRANSITORIA e compensar estoque")
+        void deveLancarTransientExceptionQuandoFreteRetornaRespostaComFALHA_TRANSITORIA() {
             ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-001", "RESERVADO");
 
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100")))
                     .thenReturn(new FreteResult(null, "FALHA_TRANSITORIA", 0.0, null));
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido);
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido))
+                    .isInstanceOf(TransientException.class);
 
-            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
+            verify(pedidoRepository, times(3)).salvar(any());
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_TRANSITORIA quando pagamento retorna null (erro de servidor) e compensar estoque e frete")
-        void deveRetornarFALHA_TRANSITORIAQuandoPagamentoRetornaNullECompensarEstoqueEFrete() {
+        @DisplayName("deve lancar TransientException quando pagamento retorna null e compensar estoque e frete")
+        void deveLancarTransientExceptionQuandoPagamentoRetornaNullECompensarEstoqueEFrete() {
             ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-001", "RESERVADO");
             FreteResult frete = new FreteResult("frete-001", "CALCULADO", 20.0, "3 dias uteis");
 
@@ -222,16 +232,17 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(anyString(), eq(261.0))).thenReturn(null);
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido);
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido))
+                    .isInstanceOf(TransientException.class);
 
-            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
             verify(integracoes).cancelarFreteBestEffort("frete-001");
+            verify(pedidoRepository, times(4)).salvar(any());
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_TRANSITORIA quando pagamento retorna resposta com status FALHA_TRANSITORIA e compensar estoque e frete")
-        void deveRetornarFALHA_TRANSITORIAQuandoPagamentoRetornaRespostaComFALHA_TRANSITORIA() {
+        @DisplayName("deve lancar TransientException quando pagamento retorna FALHA_TRANSITORIA e compensar estoque e frete")
+        void deveLancarTransientExceptionQuandoPagamentoRetornaRespostaComFALHA_TRANSITORIA() {
             ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-001", "RESERVADO");
             FreteResult frete = new FreteResult("frete-001", "CALCULADO", 20.0, "3 dias uteis");
             PagamentoResult pagamentoFalhaTransitoria = new PagamentoResult(null, "FALHA_TRANSITORIA", 261.0);
@@ -240,29 +251,32 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(anyString(), eq(261.0))).thenReturn(pagamentoFalhaTransitoria);
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido);
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido))
+                    .isInstanceOf(TransientException.class);
 
-            assertThat(response.status()).isEqualTo("FALHA_TRANSITORIA");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
             verify(integracoes).cancelarFreteBestEffort("frete-001");
+            verify(pedidoRepository, times(4)).salvar(any());
         }
 
         @Test
-        @DisplayName("deve retornar FALHA_PAGAMENTO quando pagamento falha com erro de negocio e compensar estoque e frete")
-        void deveRetornarFALHA_PAGAMENTOQuandoPagamentoFalhaComErroDeNegocioECompensarEstoqueEFrete() {
+        @DisplayName("deve salvar pedido e lancar BusinessException quando pagamento falha com erro de negocio e compensar estoque e frete")
+        void deveSalvarPedidoELancarBusinessExceptionQuandoPagamentoFalhaComErroDeNegocioECompensarEstoqueEFrete() {
             ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-001", "RESERVADO");
             FreteResult frete = new FreteResult("frete-001", "CALCULADO", 20.0, "3 dias uteis");
 
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(anyString(), eq(261.0)))
-                    .thenThrow(new BusinessException("FALHA_PAGAMENTO", null));
+                    .thenThrow(new BusinessException("FALHA_PAGAMENTO", "Cartao recusado", null));
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido);
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(ex -> assertThat(((BusinessException) ex).getStatus()).isEqualTo("FALHA_PAGAMENTO"));
 
-            assertThat(response.status()).isEqualTo("FALHA_PAGAMENTO");
             verify(integracoes).cancelarReservaBestEffort("reserva-001");
             verify(integracoes).cancelarFreteBestEffort("frete-001");
+            verify(pedidoRepository, times(4)).salvar(any());
         }
     }
 

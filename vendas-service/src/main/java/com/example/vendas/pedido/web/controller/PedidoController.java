@@ -3,15 +3,18 @@ package com.example.vendas.pedido.web.controller;
 import com.example.vendas.pedido.application.PedidoService;
 import com.example.vendas.pedido.web.dto.CriarPedidoRequest;
 import com.example.vendas.pedido.web.dto.PedidoResponse;
+import com.example.vendas.shared.exception.BusinessException;
+import com.example.vendas.shared.exception.TransientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Map;
 
 @RestController
 public class PedidoController {
@@ -25,29 +28,49 @@ public class PedidoController {
     }
 
     @PostMapping("/vendas/pedidos")
-    public PedidoResponse criar(@RequestBody CriarPedidoRequest request) {
+    public ResponseEntity<?> criar(@RequestBody CriarPedidoRequest request) {
         log.info("Recebida requisicao de criacao de pedido (totalItens={}, cepDestino={})",
                 request != null && request.items() != null ? request.items().size() : 0,
                 request != null ? request.cepDestino() : null);
         try {
             PedidoResponse response = pedidos.criarPedido(request);
             log.info("Pedido processado com sucesso (pedidoId={}, status={})", response.pedidoId(), response.status());
-            return response;
+            return ResponseEntity.ok(response);
+        } catch (BusinessException e) {
+            log.warn("Erro de negocio ao criar pedido (status={})", e.getStatus());
+            return ResponseEntity.status(409).body(Map.of(
+                    "status", 409,
+                    "error", "Conflict",
+                    "message", e.getUserMessage() != null ? e.getUserMessage() : e.getStatus()));
+        } catch (TransientException e) {
+            log.warn("Erro transitorio ao criar pedido: {}", e.getUserMessage());
+            return ResponseEntity.status(503)
+                    .header("Retry-After", "3")
+                    .body(Map.of(
+                            "status", 503,
+                            "error", "Service Unavailable",
+                            "message", e.getUserMessage()));
         } catch (IllegalArgumentException e) {
             log.warn("Falha de validacao ao criar pedido: {}", e.getMessage());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", 400,
+                    "error", "Bad Request",
+                    "message", e.getMessage()));
         }
     }
 
     @GetMapping("/vendas/pedidos/{pedidoId}")
-    public PedidoResponse obter(@PathVariable String pedidoId) {
+    public ResponseEntity<?> obter(@PathVariable String pedidoId) {
         log.info("Consulta de pedido recebida (pedidoId={})", pedidoId);
         PedidoResponse resp = pedidos.buscar(pedidoId);
         if (resp == null) {
             log.warn("Pedido nao encontrado (pedidoId={})", pedidoId);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado: " + pedidoId);
+            return ResponseEntity.status(404).body(Map.of(
+                    "status", 404,
+                    "error", "Not Found",
+                    "message", "Pedido nao encontrado: " + pedidoId));
         }
         log.info("Pedido localizado (pedidoId={}, status={})", pedidoId, resp.status());
-        return resp;
+        return ResponseEntity.ok(resp);
     }
 }

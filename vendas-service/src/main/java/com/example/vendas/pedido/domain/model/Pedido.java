@@ -17,6 +17,7 @@ public class Pedido {
     private StatusPedido status;
     private Instant criadoEm;
     private String transacaoId;
+    private String mensagemErro;
     private final List<ItemPedido> items = new ArrayList<>();
 
     private Pedido() {
@@ -48,8 +49,9 @@ public class Pedido {
         this.status = StatusPedido.PAGO;
     }
 
-    public void marcarFalha(StatusPedido status) {
+    public void marcarFalha(StatusPedido status, String mensagemErro) {
         this.status = status;
+        this.mensagemErro = mensagemErro;
     }
 
     public double calcularValorTotal() {
@@ -80,6 +82,10 @@ public class Pedido {
 
     public String getTransacaoId() {
         return transacaoId;
+    }
+
+    public String getMensagemErro() {
+        return mensagemErro;
     }
 
     public List<ItemPedido> getItems() {

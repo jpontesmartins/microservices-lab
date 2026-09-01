@@ -20,6 +20,7 @@ public record PedidoResponse(
         double valorTotal,
         double valorFreteTotal,
         String transacaoId,
-        String criadoEm
+        String criadoEm,
+        String mensagemErro
 ) {
 }
