@@ -16,11 +16,46 @@ import org.springframework.security.web.SecurityFilterChain;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Configuração de segurança do pagamento-service (Servlet / Spring MVC).
+ *
+ * <p>Responsabilidades:
+ * <ul>
+ *   <li>Validar tokens JWT emitidos pelo Keycloak (realm {@code microservices})</li>
+ *   <li>Extrair roles do claim {@code roles} do JWT e mapear para {@code ROLE_}</li>
+ *   <li>Permitir acesso sem autenticação a:
+ *     <ul>
+ *       <li>{@code /pagamento/whoami} — identificação da instância</li>
+ *       <li>{@code /status} — endpoint legado de status (mantido por compatibilidade)</li>
+ *       <li>{@code /actuator/**} — health checks e métricas Prometheus</li>
+ *     </ul>
+ *   </li>
+ *   <li>Exigir autenticação para status prefixado ({@code GET /pagamento/status})
+ *       e processamento de pagamento ({@code POST /pagamento/pagamentos})</li>
+ *   <li>Habilitar {@code @PreAuthorize} via {@code @EnableMethodSecurity}</li>
+ * </ul>
+ *
+ * <p>Stack: Spring Security Servlet + JwtDecoder + JwtAuthenticationConverter.
+ * Recebe tokens propagados pelo vendas-service via Feign.
+ * Estado interno efêmero (UUID por transação, sem banco de dados).
+ *
+ * @see org.springframework.security.oauth2.jwt.JwtDecoders
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /**
+     * Cadeia de filtros de segurança servlet.
+     *
+     * <p>Desativa CSRF (API stateless), configura sessão STATELESS,
+     * define as regras de autorização por path e integra o Resource Server
+     * JWT com decoder e conversor de authorities customizados.
+     *
+     * @param http configuração do HttpSecurity
+     * @return {@link SecurityFilterChain} construída
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -43,12 +78,29 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Decoder JWT que valida tokens contra o Keycloak.
+     *
+     * <p>Obtém as chaves públicas via {@code .well-known/openid-configuration}
+     * do issuer {@code http://keycloak:8180/realms/microservices}.
+     *
+     * @return {@link JwtDecoder} para validação de tokens
+     */
     @Bean
     public JwtDecoder jwtDecoder() {
         return JwtDecoders.fromIssuerLocation(
             "http://keycloak:8180/realms/microservices");
     }
 
+    /**
+     * Conversor de JWT para {@link org.springframework.security.core.Authentication}.
+     *
+     * <p>Extrai o claim {@code roles} (lista de strings) do JWT e gera
+     * {@link org.springframework.security.core.authority.SimpleGrantedAuthority}
+     * com prefixo {@code ROLE_} (ex: {@code "USER"} → {@code "ROLE_USER"}).
+     *
+     * @return {@link JwtAuthenticationConverter} configurado
+     */
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();

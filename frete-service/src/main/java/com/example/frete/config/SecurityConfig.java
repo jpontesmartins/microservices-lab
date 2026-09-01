@@ -91,6 +91,15 @@ public class SecurityConfig {
             "http://keycloak:8180/realms/microservices");
     }
 
+    /**
+     * Conversor de JWT para {@link org.springframework.security.core.Authentication}.
+     *
+     * <p>Extrai o claim {@code roles} (lista de strings) do JWT e gera
+     * {@link org.springframework.security.core.authority.SimpleGrantedAuthority}
+     * com prefixo {@code ROLE_} (ex: {@code "USER"} → {@code "ROLE_USER"}).
+     *
+     * @return {@link JwtAuthenticationConverter} configurado
+     */
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
