@@ -11,5 +11,7 @@ public interface ItemEstoqueRepositoryPort {
 
     Optional<ItemEstoque> buscarPorSku(String sku);
 
+    Optional<ItemEstoque> buscarPorSkuComLock(String sku);
+
     ItemEstoque salvar(ItemEstoque item);
 }

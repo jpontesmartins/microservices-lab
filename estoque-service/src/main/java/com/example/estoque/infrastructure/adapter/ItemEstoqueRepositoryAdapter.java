@@ -31,6 +31,11 @@ public class ItemEstoqueRepositoryAdapter implements ItemEstoqueRepositoryPort {
     }
 
     @Override
+    public Optional<ItemEstoque> buscarPorSkuComLock(String sku) {
+        return jpaRepository.findBySkuForUpdate(sku).map(this::toDomain);
+    }
+
+    @Override
     public ItemEstoque salvar(ItemEstoque item) {
         ItemEstoqueEntity entity = toEntity(item);
         jpaRepository.save(entity);

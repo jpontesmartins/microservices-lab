@@ -30,8 +30,12 @@ class EstoqueRepositoryIntegrationTest {
     @Autowired
     private com.example.estoque.infrastructure.repository.ItemEstoqueJpaRepository itemJpaRepository;
 
+    @Autowired
+    private com.example.estoque.infrastructure.repository.ReservaEstoqueJpaRepository reservaJpaRepository;
+
     @BeforeEach
     void setUp() {
+        reservaJpaRepository.deleteAll();
         itemJpaRepository.deleteAll();
         itemRepository.salvar(new ItemEstoque("ABC-123", "Teclado Mecanico", 42));
         itemRepository.salvar(new ItemEstoque("XYZ-789", "Mouse Gamer", 15));
