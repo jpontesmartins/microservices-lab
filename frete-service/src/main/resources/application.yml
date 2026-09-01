@@ -1,6 +1,11 @@
 spring:
   application:
     name: frete-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8180/realms/microservices
 
 server:
   port: 8084

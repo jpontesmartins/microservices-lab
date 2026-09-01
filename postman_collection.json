@@ -1,8 +1,18 @@
 {
 	"info": {
 		"name": "Microservices - ROTEIRO de Testes",
-		"description": "Colecao gerada a partir do ROTEIRO.md. Contém todos os endpoints para cada passo de teste do ecossistema de microservices. Padroes estudados: Service Discovery (Eureka), API Gateway, Saga (Orquestracao), Circuit Breaker (Resilience4j), Event-Driven (Kafka), Load Balancing (Spring Cloud LoadBalancer), Compensating Transactions.",
+		"description": "Colecao gerada a partir do ROTEIRO.md. Contém todos os endpoints para cada passo de teste do ecossistema de microservices. Padroes estudados: Service Discovery (Eureka), API Gateway, Saga (Orquestracao), Circuit Breaker (Resilience4j), Event-Driven (Kafka), Load Balancing (Spring Cloud LoadBalancer), Compensating Transactions.\n\nSEGURANÇA: Todos os endpoints protegidos já enviam o header Authorization com Bearer token obtido via Keycloak. Para autenticar como user1 (ROLE_USER) ou admin (ROLE_USER+ROLE_ROLE_ADMIN), execute o request \"Login user1\" ou \"Login admin\" na pasta \"Autenticação\" antes de prosseguir.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
 	},
 	"variable": [
 		{
@@ -30,6 +40,21 @@
 			"value": "http://localhost:8761"
 		},
 		{
+			"key": "keycloakUrl",
+			"value": "http://localhost:8180",
+			"description": "URL do Keycloak (externo, para login via Postman)"
+		},
+		{
+			"key": "keycloakIssuer",
+			"value": "http://keycloak:8180/realms/microservices",
+			"description": "Issuer URI interno (usado pelos services no Docker)"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"description": "Token JWT obtido via login no Keycloak. Preenchido automaticamente pelo script de pré-requisito ou manualmente via request 'Login user1'."
+		},
+		{
 			"key": "pedidoId",
 			"value": "",
 			"description": "Preencha com o UUID retornado ao criar um pedido (Passo 7)"
@@ -42,72 +67,249 @@
 		{
 			"key": "freteId",
 			"value": "",
-			"description": "Preenchina com o ID do frete"
+			"description": "Preencha com o ID do frete"
 		}
 	],
 	"item": [
 		{
-			"name": "Passo 5 - Whoami (via Gateway)",
+			"name": "0 - Autenticacao (Keycloak)",
+			"description": "Execute um dos requests de login ANTES de usar os endpoints protegidos. O token JWT sera salvo automaticamente na variavel de colecao 'accessToken'.",
+			"item": [
+				{
+					"name": "Login user1 (ROLE_USER)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.access_token) {",
+									"    pm.collectionVariables.set('accessToken', jsonData.access_token);",
+									"    console.log('Token salvo com sucesso (user1). Expira em ' + jsonData.expires_in + 's');",
+									"} else {",
+									"    console.error('Falha ao obter token: ' + JSON.stringify(jsonData));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"url": "{{keycloakUrl}}/realms/microservices/protocol/openid-connect/token",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "password"
+								},
+								{
+									"key": "client_id",
+									"value": "gateway-public"
+								},
+								{
+									"key": "username",
+									"value": "user1"
+								},
+								{
+									"key": "password",
+									"value": "Password123"
+								},
+								{
+									"key": "scope",
+									"value": "openid"
+								}
+							]
+						},
+						"description": "Autentica user1 via Resource Owner Password Credentials (ROPC). Salva o access_token na variavel de colecao 'accessToken'.\n\nRoles: ROLE_USER\nCredenciais: user1 / Password123"
+					}
+				},
+				{
+					"name": "Login admin (ROLE_USER + ROLE_ADMIN)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.access_token) {",
+									"    pm.collectionVariables.set('accessToken', jsonData.access_token);",
+									"    console.log('Token salvo com sucesso (admin). Expira em ' + jsonData.expires_in + 's');",
+									"} else {",
+									"    console.error('Falha ao obter token: ' + JSON.stringify(jsonData));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"url": "{{keycloakUrl}}/realms/microservices/protocol/openid-connect/token",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "password"
+								},
+								{
+									"key": "client_id",
+									"value": "gateway-public"
+								},
+								{
+									"key": "username",
+									"value": "admin"
+								},
+								{
+									"key": "password",
+									"value": "Admin123"
+								},
+								{
+									"key": "scope",
+									"value": "openid"
+								}
+							]
+						},
+						"description": "Autentica admin via Resource Owner Password Credentials (ROPC). Salva o access_token na variavel de colecao 'accessToken'.\n\nRoles: ROLE_USER, ROLE_ADMIN\nCredenciais: admin / Admin123"
+					}
+				},
+				{
+					"name": "Decodificar Token (debug)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var token = pm.collectionVariables.get('accessToken');",
+									"if (!token) {",
+									"    tests['Nenhum token salvo'] = true;",
+									"    return;",
+									"}",
+									"var parts = token.split('.');",
+									"if (parts.length !== 3) {",
+									"    tests['Token invalido'] = true;",
+									"    return;",
+									"}",
+									"var payload = JSON.parse(atob(parts[1]));",
+									"console.log('=== PAYLOAD DO TOKEN ===');",
+									"console.log(JSON.stringify(payload, null, 2));",
+									"console.log('Sub: ' + payload.sub);",
+									"console.log('Roles: ' + JSON.stringify(payload.roles));",
+									"console.log('user_id: ' + payload.user_id);",
+									"var exp = new Date(payload.exp * 1000);",
+									"console.log('Expira em: ' + exp.toISOString());",
+									"tests['Token valido'] = payload.exp > (Date.now() / 1000);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": "https://jwt.io",
+						"description": "Apenas para debug. O payload do token salvo sera impresso no console do Postman (View > Show Postman Console). Nao envia nenhuma requisicao real."
+					}
+				}
+			]
+		},
+		{
+			"name": "Passo 5 - Whoami (via Gateway, PUBLICO)",
 			"item": [
 				{
 					"name": "Whoami - Vendas",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/vendas",
-						"description": "Retorna {service, instanceId, port} do vendas-service"
+						"description": "Retorna {service, instanceId, port} do vendas-service. Endpoint PUBLICO - nao requer autenticacao."
 					}
 				},
 				{
 					"name": "Whoami - Estoque",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/estoque",
-						"description": "Retorna {service, instanceId, port} do estoque-service"
+						"description": "Retorna {service, instanceId, port} do estoque-service. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Whoami - Pagamento",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/pagamento",
-						"description": "Retorna {service, instanceId, port} do pagamento-service"
+						"description": "Retorna {service, instanceId, port} do pagamento-service. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Whoami - Frete",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/frete",
-						"description": "Retorna {service, instanceId, port} do frete-service"
+						"description": "Retorna {service, instanceId, port} do frete-service. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Whoami - Transportadora",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/transportadora",
-						"description": "Retorna {service, instanceId, port} do transportadora-service"
+						"description": "Retorna {service, instanceId, port} do transportadora-service. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Whoami - Notificacao",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/notificacao",
-						"description": "Retorna {service, instanceId, port} do notificacao-service"
+						"description": "Retorna {service, instanceId, port} do notificacao-service. Endpoint PUBLICO."
 					}
 				}
 			]
 		},
 		{
 			"name": "Passo 6 - Endpoints Diretos (sem Gateway)",
+			"description": "Requerem token JWT. Faca login na pasta '0 - Autenticacao' antes de executar.",
 			"item": [
 				{
 					"name": "Listar itens em estoque",
 					"request": {
 						"method": "GET",
 						"url": "{{estoqueUrl}}/estoque/itens",
-						"description": "Lista todos os itens disponíveis em estoque"
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"description": "Lista todos os itens disponiveis em estoque. Requer JWT (ROLE_USER)."
 					}
 				},
 				{
@@ -115,7 +317,13 @@
 					"request": {
 						"method": "GET",
 						"url": "{{pagamentoUrl}}/pagamento/status",
-						"description": "Verifica o status do serviço de pagamentos"
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"description": "Verifica o status do servico de pagamentos. Requer JWT."
 					}
 				},
 				{
@@ -123,13 +331,20 @@
 					"request": {
 						"method": "GET",
 						"url": "{{vendasUrl}}/vendas",
-						"description": "Lista todas as vendas registradas"
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"description": "Lista todas as vendas registradas. Requer JWT."
 					}
 				}
 			]
 		},
 		{
 			"name": "Passo 7 - Criar Pedido (fluxo completo)",
+			"description": "Requer token JWT. Faca login na pasta '0 - Autenticacao' antes de executar.",
 			"item": [
 				{
 					"name": "Criar Pedido",
@@ -140,13 +355,17 @@
 							{
 								"key": "Content-Type",
 								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"items\": [\n    {\n      \"sku\": \"ABC-123\",\n      \"quantidade\": 2,\n      \"valor\": 199.90\n    }\n  ],\n  \"cepDestino\": \"01310-100\"\n}"
 						},
-						"description": "Fluxo principal: vendas-service orquestra estoque → frete → pagamento. Copie o pedidoId da resposta para as variáveis de coleção."
+						"description": "Fluxo principal: vendas-service orquestra estoque -> frete -> pagamento. Copie o pedidoId da resposta para as variaveis de colecao."
 					},
 					"event": [
 						{
@@ -178,6 +397,7 @@
 		},
 		{
 			"name": "Passo 8 - Consultar Pedido",
+			"description": "Requer token JWT. Faca login na pasta '0 - Autenticacao' antes de executar.",
 			"item": [
 				{
 					"name": "Buscar Pedido por ID",
@@ -188,13 +408,20 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["vendas", "pedidos", "{{pedidoId}}"]
 						},
-						"description": "Busca o pedido criado no Passo 7 pelo UUID"
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"description": "Busca o pedido criado no Passo 7 pelo UUID. Requer JWT."
 					}
 				}
 			]
 		},
 		{
-			"name": "Passo 9 - Cenários de Falha",
+			"name": "Passo 9 - Cenarios de Falha",
+			"description": "Requer token JWT. Faca login na pasta '0 - Autenticacao' antes de executar.",
 			"item": [
 				{
 					"name": "Estoque insuficiente",
@@ -205,13 +432,17 @@
 							{
 								"key": "Content-Type",
 								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"items\": [\n    {\n      \"sku\": \"XYZ-789\",\n      \"quantidade\": 999,\n      \"valor\": 50.00\n    }\n  ],\n  \"cepDestino\": \"01310-100\"\n}"
 						},
-						"description": "Quantidade maior que o estoque disponível. Espera-se erro de estoque e compensação (cancelamento de frete/reserva)."
+						"description": "Quantidade maior que o estoque disponivel. Espera-se erro de estoque e compensacao (cancelamento de frete/reserva)."
 					}
 				},
 				{
@@ -223,19 +454,24 @@
 							{
 								"key": "Content-Type",
 								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"items\": [\n    {\n      \"sku\": \"NAO-EXISTE\",\n      \"quantidade\": 1,\n      \"valor\": 100.00\n    }\n  ],\n  \"cepDestino\": \"01310-100\"\n}"
 						},
-						"description": "SKU que não existe no estoque. Espera-se erro de validação."
+						"description": "SKU que nao existe no estoque. Espera-se erro de validacao."
 					}
 				}
 			]
 		},
 		{
 			"name": "Passo 10 - Circuit Breaker (Resilience4j)",
+			"description": "Requer token JWT. Faca login na pasta '0 - Autenticacao' antes de executar.",
 			"item": [
 				{
 					"name": "Criar Pedido (para abrir CB)",
@@ -246,27 +482,35 @@
 							{
 								"key": "Content-Type",
 								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"items\": [\n    {\n      \"sku\": \"ABC-123\",\n      \"quantidade\": 1,\n      \"valor\": 10.00\n    }\n  ],\n  \"cepDestino\": \"01310-100\"\n}"
 						},
-						"description": "Execute 5 vezes com pagamento.failRate=1.0 para abrir o circuit breaker. Após 5 falhas, o CB abre e retorna FALHA_TRANSITORIA (fallback) imediatamente."
+						"description": "Execute 5 vezes com pagamento.failRate=1.0 para abrir o circuit breaker. Apos 5 falhas, o CB abre e retorna FALHA_TRANSITORIA (fallback) imediatamente."
 					}
 				},
 				{
-					"name": "Métricas do Circuit Breaker",
+					"name": "Metricas do Circuit Breaker",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{vendasUrl}}/actuator/metrics/resilience4j.circuitbreaker.state",
-						"description": "Verifica o estado atual do circuit breaker via métricas do Actuator"
+						"description": "Verifica o estado atual do circuit breaker via metricas do Actuator. Endpoint PUBLICO."
 					}
 				}
 			]
 		},
 		{
 			"name": "Passo 11 - Cancelamento",
+			"description": "Requer token JWT. Faca login na pasta '0 - Autenticacao' antes de executar.",
 			"item": [
 				{
 					"name": "Cancelar reserva de estoque",
@@ -277,7 +521,13 @@
 							"host": ["{{estoqueUrl}}"],
 							"path": ["estoque", "reservas", "{{reservaId}}"]
 						},
-						"description": "Cancela uma reserva de estoque diretamente no estoque-service"
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"description": "Cancela uma reserva de estoque diretamente no estoque-service. Requer JWT."
 					}
 				},
 				{
@@ -289,7 +539,13 @@
 							"host": ["{{freteUrl}}"],
 							"path": ["frete", "calcular", "{{freteId}}"]
 						},
-						"description": "Cancela um frete diretamente no frete-service"
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"description": "Cancela um frete diretamente no frete-service. Requer JWT."
 					}
 				}
 			]
@@ -298,47 +554,65 @@
 			"name": "Passo 12 - Observabilidade",
 			"item": [
 				{
-					"name": "Prometheus - Métricas API Gateway",
+					"name": "Prometheus - Metricas API Gateway",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/actuator/prometheus",
-						"description": "Métricas no formato Prometheus do API Gateway"
+						"description": "Metricas no formato Prometheus do API Gateway. Endpoint PUBLICO."
 					}
 				},
 				{
-					"name": "Prometheus - Métricas vendas-service",
+					"name": "Prometheus - Metricas vendas-service",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{vendasUrl}}/actuator/prometheus",
-						"description": "Métricas no formato Prometheus do vendas-service"
+						"description": "Metricas no formato Prometheus do vendas-service. Endpoint PUBLICO."
 					}
 				},
 				{
-					"name": "Prometheus - Métricas estoque-service",
+					"name": "Prometheus - Metricas estoque-service",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{estoqueUrl}}/actuator/prometheus",
-						"description": "Métricas no formato Prometheus do estoque-service"
+						"description": "Metricas no formato Prometheus do estoque-service. Endpoint PUBLICO."
 					}
 				},
 				{
-					"name": "Prometheus - Métricas pagamento-service",
+					"name": "Prometheus - Metricas pagamento-service",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{pagamentoUrl}}/actuator/prometheus",
-						"description": "Métricas no formato Prometheus do pagamento-service"
+						"description": "Metricas no formato Prometheus do pagamento-service. Endpoint PUBLICO."
 					}
 				},
 				{
-					"name": "Prometheus - Métricas frete-service",
+					"name": "Prometheus - Metricas frete-service",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{freteUrl}}/actuator/prometheus",
-						"description": "Métricas no formato Prometheus do frete-service"
+						"description": "Metricas no formato Prometheus do frete-service. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Grafana",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "http://localhost:3000",
@@ -347,10 +621,13 @@
 				},
 				{
 					"name": "Zipkin",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "http://localhost:9411",
-						"description": "Acesse http://localhost:9411 → Find Traces para ver o fluxo completo de uma requisição"
+						"description": "Acesse http://localhost:9411 -> Find Traces para ver o fluxo completo de uma requisicao"
 					}
 				}
 			]
@@ -360,50 +637,68 @@
 			"item": [
 				{
 					"name": "Whoami Vendas (round-robin)",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/vendas",
-						"description": "Execute várias vezes. Se houver múltiplas instâncias, o instanceId e/ou port devem variar (round-robin)."
+						"description": "Execute varias vezes. Se houver multiplas instancias, o instanceId e/ou port devem variar (round-robin). Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Whoami Estoque (round-robin)",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/estoque",
-						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de estoque."
+						"description": "Execute varias vezes para verificar balanceamento de carga entre instancias de estoque. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Whoami Pagamento (round-robin)",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/pagamento",
-						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de pagamento."
+						"description": "Execute varias vezes para verificar balanceamento de carga entre instancias de pagamento. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Whoami Frete (round-robin)",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/frete",
-						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de frete."
+						"description": "Execute varias vezes para verificar balanceamento de carga entre instancias de frete. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Whoami Transportadora (round-robin)",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/transportadora",
-						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de transportadora."
+						"description": "Execute varias vezes para verificar balanceamento de carga entre instancias de transportadora. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Whoami Notificacao (round-robin)",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/whoami/notificacao",
-						"description": "Execute várias vezes para verificar balanceamento de carga entre instâncias de notificação."
+						"description": "Execute varias vezes para verificar balanceamento de carga entre instancias de notificacao. Endpoint PUBLICO."
 					}
 				}
 			]
@@ -413,64 +708,86 @@
 			"item": [
 				{
 					"name": "Health - API Gateway",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{baseUrl}}/actuator/health",
-						"description": "Verifica a saúde do API Gateway"
+						"description": "Verifica a saude do API Gateway. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Health - vendas-service",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{vendasUrl}}/actuator/health",
-						"description": "Verifica a saúde do vendas-service"
+						"description": "Verifica a saude do vendas-service. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Health - estoque-service",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{estoqueUrl}}/actuator/health",
-						"description": "Verifica a saúde do estoque-service"
+						"description": "Verifica a saude do estoque-service. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Health - pagamento-service",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{pagamentoUrl}}/actuator/health",
-						"description": "Verifica a saúde do pagamento-service"
+						"description": "Verifica a saude do pagamento-service. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Health - frete-service",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "{{freteUrl}}/actuator/health",
-						"description": "Verifica a saúde do frete-service"
+						"description": "Verifica a saude do frete-service. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Health - transportadora-service",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "http://localhost:8085/actuator/health",
-						"description": "Verifica a saúde do transportadora-service"
+						"description": "Verifica a saude do transportadora-service. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Health - notificacao-service",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "http://localhost:8086/actuator/health",
-						"description": "Verifica a saúde do notificacao-service"
+						"description": "Verifica a saude do notificacao-service. Endpoint PUBLICO."
 					}
 				}
 			]
 		},
 		{
 			"name": "Passo 16 - Kafka Pub/Sub",
+			"description": "Requer token JWT. Faca login na pasta '0 - Autenticacao' antes de executar.",
 			"item": [
 				{
 					"name": "Criar Pedido (para pub no Kafka)",
@@ -481,29 +798,39 @@
 							{
 								"key": "Content-Type",
 								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
 							}
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"items\": [\n    {\n      \"sku\": \"ABC-123\",\n      \"quantidade\": 1,\n      \"valor\": 199.90\n    }\n  ],\n  \"cepDestino\": \"01310-100\"\n}"
 						},
-						"description": "Após pagamento aprovado, vendas-service publica evento PedidoCriado no Kafka. Verifique os logs de transportadora-service e notificacao-service."
+						"description": "Apos pagamento aprovado, vendas-service publica evento PedidoCriado no Kafka. Verifique os logs de transportadora-service e notificacao-service."
 					}
 				},
 				{
 					"name": "Logs - Transportadora",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "http://localhost:8085/actuator/health",
-						"description": "Verifique com: docker compose logs transportadora-service. Deve mostrar 'Pedido sendo processado pela transportadora'."
+						"description": "Verifique com: docker compose logs transportadora-service. Deve mostrar 'Pedido sendo processado pela transportadora'. Endpoint PUBLICO."
 					}
 				},
 				{
 					"name": "Logs - Notificacao",
+					"auth": {
+						"type": "noauth"
+					},
 					"request": {
 						"method": "GET",
 						"url": "http://localhost:8086/actuator/health",
-						"description": "Verifique com: docker compose logs notificacao-service. Deve mostrar 'Notificação enviada ao usuário'."
+						"description": "Verifique com: docker compose logs notificacao-service. Deve mostrar 'Notificacao enviada ao usuario'. Endpoint PUBLICO."
 					}
 				}
 			]
