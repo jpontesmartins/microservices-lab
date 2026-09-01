@@ -153,3 +153,5 @@ logging:
     level: "%5p [%X{traceId:-},%X{spanId:-}]"
   level:
     io.github.resilience4j: DEBUG
+    brave: DEBUG
+    io.micrometer.tracing: DEBUG
