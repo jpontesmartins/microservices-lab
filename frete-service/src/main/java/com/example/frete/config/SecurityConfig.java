@@ -16,11 +16,46 @@ import org.springframework.security.web.SecurityFilterChain;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Configuração de segurança do frete-service (Servlet / Spring MVC).
+ *
+ * <p>Responsabilidades:
+ * <ul>
+ *   <li>Validar tokens JWT emitidos pelo Keycloak (realm {@code microservices})</li>
+ *   <li>Extrair roles do claim {@code roles} do JWT e mapear para {@code ROLE_}</li>
+ *   <li>Permitir acesso sem autenticação a:
+ *     <ul>
+ *       <li>{@code /frete/whoami} — identificação da instância</li>
+ *       <li>{@code /actuator/**} — health checks e métricas Prometheus</li>
+ *     </ul>
+ *   </li>
+ *   <li>Exigir autenticação para cálculo ({@code POST /frete/calcular}),
+ *       cancelamento ({@code DELETE /frete/calcular/{id}} e
+ *       {@code POST /frete/calcular/{id}/cancelar})</li>
+ *   <li>Habilitar {@code @PreAuthorize} via {@code @EnableMethodSecurity}</li>
+ * </ul>
+ *
+ * <p>Stack: Spring Security Servlet + JwtDecoder + JwtAuthenticationConverter.
+ * Recebe tokens propagados pelo vendas-service via Feign.
+ * Estado interno gerenciado via {@link java.util.concurrent.ConcurrentHashMap} (sem banco de dados).
+ *
+ * @see org.springframework.security.oauth2.jwt.JwtDecoders
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /**
+     * Cadeia de filtros de segurança servlet.
+     *
+     * <p>Desativa CSRF (API stateless), configura sessão STATELESS,
+     * define as regras de autorização por path e integra o Resource Server
+     * JWT com decoder e conversor de authorities customizados.
+     *
+     * @param http configuração do HttpSecurity
+     * @return {@link SecurityFilterChain} construída
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -42,6 +77,14 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Decoder JWT que valida tokens contra o Keycloak.
+     *
+     * <p>Obtém as chaves públicas via {@code .well-known/openid-configuration}
+     * do issuer {@code http://keycloak:8180/realms/microservices}.
+     *
+     * @return {@link JwtDecoder} para validação de tokens
+     */
     @Bean
     public JwtDecoder jwtDecoder() {
         return JwtDecoders.fromIssuerLocation(
