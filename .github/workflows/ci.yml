@@ -60,11 +60,30 @@ jobs:
       - id: set-matrix
         run: |
           services='[]'
-          for svc in api-gateway discovery-server vendas-service estoque-service frete-service pagamento-service transportadora-service notificacao-service; do
-            if [ "${{ steps.filter.outputs[format('{0}', svc)] }}" = "true" ]; then
-              services=$(echo "$services" | jq -c ". + [\"$svc\"]")
-            fi
-          done
+          if [ "${{ steps.filter.outputs.api-gateway }}" = "true" ]; then
+            services=$(echo "$services" | jq -c '. + ["api-gateway"]')
+          fi
+          if [ "${{ steps.filter.outputs.discovery-server }}" = "true" ]; then
+            services=$(echo "$services" | jq -c '. + ["discovery-server"]')
+          fi
+          if [ "${{ steps.filter.outputs.vendas-service }}" = "true" ]; then
+            services=$(echo "$services" | jq -c '. + ["vendas-service"]')
+          fi
+          if [ "${{ steps.filter.outputs.estoque-service }}" = "true" ]; then
+            services=$(echo "$services" | jq -c '. + ["estoque-service"]')
+          fi
+          if [ "${{ steps.filter.outputs.frete-service }}" = "true" ]; then
+            services=$(echo "$services" | jq -c '. + ["frete-service"]')
+          fi
+          if [ "${{ steps.filter.outputs.pagamento-service }}" = "true" ]; then
+            services=$(echo "$services" | jq -c '. + ["pagamento-service"]')
+          fi
+          if [ "${{ steps.filter.outputs.transportadora-service }}" = "true" ]; then
+            services=$(echo "$services" | jq -c '. + ["transportadora-service"]')
+          fi
+          if [ "${{ steps.filter.outputs.notificacao-service }}" = "true" ]; then
+            services=$(echo "$services" | jq -c '. + ["notificacao-service"]')
+          fi
           echo "matrix={\"service\":$services}" >> "$GITHUB_OUTPUT"
           echo "Changed services: $services"
 
