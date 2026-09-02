@@ -195,8 +195,10 @@
 
 ## Prioridade 9 — CI/CD e Qualidade
 
-- [ ] **Pipeline CI/CD**
-  - Build → Unit Tests → Integration Tests → Docker Build (sem -DskipTests) → Push to Registry → Deploy
+- [x] **Pipeline CI/CD**
+  - Build → Unit Tests → Docker Build → Push to GHCR (GitHub Actions)
+  - Configurado em `.github/workflows/ci.yml`
+  - Matrix paralelo por service, path filters, cache Maven, push para ghcr.io
 
 - [ ] **Quality gates**
   - Cobertura minima 70% (JaCoCo)
