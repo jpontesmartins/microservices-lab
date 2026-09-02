@@ -32,9 +32,10 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      services: ${{ steps.filter.outputs.changes }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -56,21 +57,24 @@ jobs:
             notificacao-service:
               - 'notificacao-service/**'
 
+      - id: set-matrix
+        run: |
+          services='[]'
+          for svc in api-gateway discovery-server vendas-service estoque-service frete-service pagamento-service transportadora-service notificacao-service; do
+            if [ "${{ steps.filter.outputs[format('{0}', svc)] }}" = "true" ]; then
+              services=$(echo "$services" | jq -c ". + [\"$svc\"]")
+            fi
+          done
+          echo "matrix={\"service\":$services}" >> "$GITHUB_OUTPUT"
+          echo "Changed services: $services"
+
   build-and-test:
     needs: detect-changes
+    if: needs.detect-changes.outputs.matrix != '{"service":[]}'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        service:
-          - api-gateway
-          - discovery-server
-          - vendas-service
-          - estoque-service
-          - frete-service
-          - pagamento-service
-          - transportadora-service
-          - notificacao-service
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -95,23 +99,14 @@ jobs:
 
   docker-build:
     needs: [detect-changes, build-and-test]
+    if: github.event_name == 'push' && needs.detect-changes.outputs.matrix != '{"service":[]}'
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: false
-      matrix:
-        service:
-          - api-gateway
-          - discovery-server
-          - vendas-service
-          - estoque-service
-          - frete-service
-          - pagamento-service
-          - transportadora-service
-          - notificacao-service
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -147,7 +142,7 @@ jobs:
           platforms: linux/amd64
 
   summary:
-    needs: [build-and-test, docker-build]
+    needs: [detect-changes, build-and-test, docker-build]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -159,11 +154,7 @@ jobs:
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Build Results" >> $GITHUB_STEP_SUMMARY
-          echo "| Service | Build | Docker |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          for svc in api-gateway discovery-server vendas-service estoque-service frete-service pagamento-service transportadora-service notificacao-service; do
-            test_result="${{ needs.build-and-test.result }}"
-            docker_result="${{ needs.docker-build.result }}"
-            echo "| $svc | $test_result | $docker_result |" >> $GITHUB_STEP_SUMMARY
-          done
+          echo "**Services changed:** ${{ needs.detect-changes.outputs.matrix }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build:** ${{ needs.build-and-test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Docker:** ${{ needs.docker-build.result }}" >> $GITHUB_STEP_SUMMARY
