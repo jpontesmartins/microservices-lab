@@ -41,7 +41,8 @@ public class PedidoService {
 
     /**
      * Cria e processa um novo pedido seguindo o padrao saga com 3 etapas:
-     * reserva de estoque (por item), calculo de frete (por item) e processamento de pagamento (total).
+     * 1. reserva de estoque (por item), 2. calculo de frete (por item) e 3. processamento de pagamento (total).
+     * Ao finalizar, publica na fila o pedido criado
      * Em caso de falha, executa transacoes compensatorias (best-effort).
      *
      * @param request dados do pedido a ser criado
