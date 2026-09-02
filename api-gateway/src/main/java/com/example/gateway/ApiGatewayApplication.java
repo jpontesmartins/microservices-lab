@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
  * Classe principal do API Gateway.
- * Ponto de entrada único para todos os microserviços do ecossistema.
+ * Ponto de entrada unico para todos os microservicos do ecossistema.
  */
 @SpringBootApplication
 public class ApiGatewayApplication {
