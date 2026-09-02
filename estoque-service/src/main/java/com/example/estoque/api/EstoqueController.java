@@ -51,6 +51,9 @@ public class EstoqueController {
         return itens;
     }
 
+    /**
+     * Reservar itens de pedido no estoque
+     */
     @PostMapping("/estoque/reservas")
     public ReservaResponse reservar(@RequestBody ReservaRequest request) {
         log.info("Solicitacao de reserva recebida (pedidoId={}, sku={}, quantidade={})",
