@@ -9,7 +9,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtDecoders;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -57,7 +56,7 @@ public class SecurityConfig {
      * @return {@link SecurityFilterChain} construída
      */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
@@ -71,25 +70,11 @@ public class SecurityConfig {
             )
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt
-                    .decoder(jwtDecoder())
+                    .decoder(jwtDecoder)
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
                 )
             );
         return http.build();
-    }
-
-    /**
-     * Decoder JWT que valida tokens contra o Keycloak.
-     *
-     * <p>Obtém as chaves públicas via {@code .well-known/openid-configuration}
-     * do issuer {@code http://keycloak:8180/realms/microservices}.
-     *
-     * @return {@link JwtDecoder} para validação de tokens
-     */
-    @Bean
-    public JwtDecoder jwtDecoder() {
-        return JwtDecoders.fromIssuerLocation(
-            "http://keycloak:8180/realms/microservices");
     }
 
     /**
