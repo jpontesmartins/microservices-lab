@@ -8,6 +8,7 @@ import com.example.estoque.shared.exception.EstoqueInsuficienteException;
 import com.example.estoque.shared.exception.SkuDesconhecidoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +51,12 @@ public class EstoqueService {
         String skuFinal = sku.trim();
         log.info("Processando reserva de estoque (pedidoId={}, sku={}, quantidade={})", pedidoId, skuFinal, quantidade);
 
+        if (reservaRepository.existsByPedidoIdAndSku(pedidoId, skuFinal)) {
+            log.info("Reserva ja existe, retornando existente (pedidoId={}, sku={})", pedidoId, skuFinal);
+            return reservaRepository.buscarPorPedidoIdESku(pedidoId, skuFinal)
+                    .orElseThrow(() -> new IllegalStateException("Reserva inconsistente"));
+        }
+
         ItemEstoque item = itemRepository.buscarPorSkuComLock(skuFinal)
                 .orElseThrow(() -> {
                     log.warn("SKU desconhecido informado na reserva (pedidoId={}, sku={})", pedidoId, skuFinal);
@@ -67,7 +74,13 @@ public class EstoqueService {
 
         String reservaId = UUID.randomUUID().toString();
         ReservaEstoque reserva = new ReservaEstoque(reservaId, skuFinal, quantidade, pedidoId);
-        reservaRepository.salvar(reserva);
+        try {
+            reservaRepository.salvar(reserva);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Reserva duplicada detectada, retornando existente (pedidoId={}, sku={})", pedidoId, skuFinal);
+            return reservaRepository.buscarPorPedidoIdESku(pedidoId, skuFinal)
+                    .orElseThrow(() -> new IllegalStateException("Reserva inconsistente"));
+        }
 
         log.info("Reserva registrada com sucesso (pedidoId={}, reservaId={}, sku={}, quantidade={})",
                 pedidoId, reservaId, sku, quantidade);

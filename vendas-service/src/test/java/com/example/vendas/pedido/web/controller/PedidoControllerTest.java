@@ -20,6 +20,8 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,9 +44,9 @@ class PedidoControllerTest {
     void deveRetornar200QuandoPedidoECriadoComSucesso() {
         PedidoResponse response = new PedidoResponse(
                 "pedido-001", "PAGO", List.of(), 261.0, 20.0, "transacao-001", "2026-09-01T10:00:00", null);
-        when(pedidos.criarPedido(any())).thenReturn(response);
+        when(pedidos.criarPedido(any(), any())).thenReturn(response);
 
-        ResponseEntity<?> result = controller.criar(requestValido());
+        ResponseEntity<?> result = controller.criar(null, requestValido());
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         PedidoResponse body = (PedidoResponse) result.getBody();
@@ -55,10 +57,10 @@ class PedidoControllerTest {
     @Test
     @DisplayName("deve retornar 409 com mensagem amigavel quando estoque falha")
     void deveRetornar409ComMensagemAmigavelQuandoEstoqueFalha() {
-        when(pedidos.criarPedido(any()))
+        when(pedidos.criarPedido(any(), any()))
                 .thenThrow(new BusinessException("FALHA_ESTOQUE", "Estoque insuficiente para o SKU-ABC", null));
 
-        ResponseEntity<?> result = controller.criar(requestValido());
+        ResponseEntity<?> result = controller.criar(null, requestValido());
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         @SuppressWarnings("unchecked")
@@ -69,10 +71,10 @@ class PedidoControllerTest {
     @Test
     @DisplayName("deve retornar 409 quando frete falha com erro de negocio")
     void deveRetornar409QuandoFreteFalhaComErroDeNegocio() {
-        when(pedidos.criarPedido(any()))
+        when(pedidos.criarPedido(any(), any()))
                 .thenThrow(new BusinessException("FALHA_FRETE", "CEP de destino invalido", null));
 
-        ResponseEntity<?> result = controller.criar(requestValido());
+        ResponseEntity<?> result = controller.criar(null, requestValido());
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         @SuppressWarnings("unchecked")
@@ -83,10 +85,10 @@ class PedidoControllerTest {
     @Test
     @DisplayName("deve retornar 409 quando pagamento falha com erro de negocio")
     void deveRetornar409QuandoPagamentoFalhaComErroDeNegocio() {
-        when(pedidos.criarPedido(any()))
+        when(pedidos.criarPedido(any(), any()))
                 .thenThrow(new BusinessException("FALHA_PAGAMENTO", "Cartao recusado", null));
 
-        ResponseEntity<?> result = controller.criar(requestValido());
+        ResponseEntity<?> result = controller.criar(null, requestValido());
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         @SuppressWarnings("unchecked")
@@ -97,10 +99,10 @@ class PedidoControllerTest {
     @Test
     @DisplayName("deve retornar 503 quando servico downstream esta indisponivel")
     void deveRetornar503QuandoServicoDownstreamEstaIndisponivel() {
-        when(pedidos.criarPedido(any()))
+        when(pedidos.criarPedido(any(), any()))
                 .thenThrow(new TransientException("Servico de estoque temporariamente indisponivel", null));
 
-        ResponseEntity<?> result = controller.criar(requestValido());
+        ResponseEntity<?> result = controller.criar(null, requestValido());
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(result.getHeaders().getFirst("Retry-After")).isEqualTo("3");
@@ -112,14 +114,55 @@ class PedidoControllerTest {
     @Test
     @DisplayName("deve retornar 400 quando request e invalido")
     void deveRetornar400QuandoRequestEInvalido() {
-        when(pedidos.criarPedido(any()))
+        when(pedidos.criarPedido(any(), any()))
                 .thenThrow(new IllegalArgumentException("Body obrigatorio"));
 
-        ResponseEntity<?> result = controller.criar(null);
+        ResponseEntity<?> result = controller.criar(null, null);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) result.getBody();
         assertThat(body.get("message")).isEqualTo("Body obrigatorio");
+    }
+
+    @Test
+    @DisplayName("deve passar Idempotency-Key para o service")
+    void devePassarIdempotencyKeyParaOService() {
+        PedidoResponse response = new PedidoResponse(
+                "minha-chave-123", "PAGO", List.of(), 261.0, 20.0, "transacao-001", "2026-09-01T10:00:00", null);
+        when(pedidos.criarPedido(any(), eq("minha-chave-123"))).thenReturn(response);
+
+        ResponseEntity<?> result = controller.criar("minha-chave-123", requestValido());
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        PedidoResponse body = (PedidoResponse) result.getBody();
+        assertThat(body.pedidoId()).isEqualTo("minha-chave-123");
+    }
+
+    @Test
+    @DisplayName("deve passar null quando Idempotency-Key nao e fornecida")
+    void devePassarNullQuandoIdempotencyKeyNaoEFornecida() {
+        PedidoResponse response = new PedidoResponse(
+                "uuid-gerado", "PAGO", List.of(), 261.0, 20.0, "transacao-001", "2026-09-01T10:00:00", null);
+        when(pedidos.criarPedido(any(), eq(null))).thenReturn(response);
+
+        ResponseEntity<?> result = controller.criar(null, requestValido());
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("deve retornar 200 com pedido existente quando idempotency key ja utilizada")
+    void deveRetornar200ComPedidoExistenteQuandoIdempotencyKeyJaUtilizada() {
+        PedidoResponse response = new PedidoResponse(
+                "chave-duplicada", "FALHA_ESTOQUE", List.of(), 50.0, 0.0, null, "2026-09-01T10:00:00", "SKU desconhecido");
+        when(pedidos.criarPedido(any(), eq("chave-duplicada"))).thenReturn(response);
+
+        ResponseEntity<?> result = controller.criar("chave-duplicada", requestValido());
+
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        PedidoResponse body = (PedidoResponse) result.getBody();
+        assertThat(body.pedidoId()).isEqualTo("chave-duplicada");
+        assertThat(body.status()).isEqualTo("FALHA_ESTOQUE");
     }
 }

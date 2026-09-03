@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -178,6 +180,84 @@ class EstoqueServiceTest {
             boolean ok = estoqueService.cancelarReserva("reserva-inexistente");
 
             assertThat(ok).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("reservar() - Idempotencia")
+    class IdempotenciaTests {
+
+        @Test
+        @DisplayName("deve retornar reserva existente quando pedidoId e sku ja foram reservados")
+        void deveRetornarReservaExistenteQuandoPedidoIdESkuJaReservados() {
+            ReservaEstoque reservaExistente = new ReservaEstoque("reserva-abc", "ABC-123", 5, "pedido-001");
+
+            when(reservaRepository.existsByPedidoIdAndSku("pedido-001", "ABC-123")).thenReturn(true);
+            when(reservaRepository.buscarPorPedidoIdESku("pedido-001", "ABC-123"))
+                    .thenReturn(Optional.of(reservaExistente));
+
+            ReservaEstoque reserva = estoqueService.reservar("pedido-001", "ABC-123", 5);
+
+            assertThat(reserva).isNotNull();
+            assertThat(reserva.getId()).isEqualTo("reserva-abc");
+            assertThat(reserva.getSku()).isEqualTo("ABC-123");
+            assertThat(reserva.getQuantidade()).isEqualTo(5);
+            assertThat(reserva.getPedidoId()).isEqualTo("pedido-001");
+            verify(itemRepository, never()).buscarPorSkuComLock(any());
+            verify(itemRepository, never()).salvar(any());
+            verify(reservaRepository, never()).salvar(any());
+        }
+
+        @Test
+        @DisplayName("deve retornar reserva existente quando DataIntegrityViolationException occurs durante salvar")
+        void deveRetornarReservaExistenteQuandoDataIntegrityViolationEmSalvar() {
+            ReservaEstoque reservaExistente = new ReservaEstoque("reserva-concorrencia", "ABC-123", 5, "pedido-concorrencia");
+
+            when(reservaRepository.existsByPedidoIdAndSku("pedido-concorrencia", "ABC-123")).thenReturn(false);
+            when(itemRepository.buscarPorSkuComLock("ABC-123")).thenReturn(Optional.of(teclado));
+            when(reservaRepository.salvar(any()))
+                    .thenThrow(new DataIntegrityViolationException("Duplicate key"));
+            when(reservaRepository.buscarPorPedidoIdESku("pedido-concorrencia", "ABC-123"))
+                    .thenReturn(Optional.of(reservaExistente));
+
+            ReservaEstoque reserva = estoqueService.reservar("pedido-concorrencia", "ABC-123", 5);
+
+            assertThat(reserva).isNotNull();
+            assertThat(reserva.getId()).isEqualTo("reserva-concorrencia");
+            verify(itemRepository).salvar(teclado);
+        }
+
+        @Test
+        @DisplayName("deve criar nova reserva quando nao existe reserva para pedidoId e sku")
+        void deveCriarNovaReservaQuandoNaoExisteReservaParaPedidoIdESku() {
+            when(reservaRepository.existsByPedidoIdAndSku("pedido-novo", "ABC-123")).thenReturn(false);
+            when(itemRepository.buscarPorSkuComLock("ABC-123")).thenReturn(Optional.of(teclado));
+            when(reservaRepository.salvar(any(ReservaEstoque.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            ReservaEstoque reserva = estoqueService.reservar("pedido-novo", "ABC-123", 3);
+
+            assertThat(reserva).isNotNull();
+            assertThat(reserva.getId()).isNotBlank();
+            assertThat(reserva.getSku()).isEqualTo("ABC-123");
+            assertThat(reserva.getQuantidade()).isEqualTo(3);
+            assertThat(reserva.getPedidoId()).isEqualTo("pedido-novo");
+            assertThat(teclado.getQuantidade()).isEqualTo(39); // 42 - 3
+            verify(reservaRepository).salvar(any(ReservaEstoque.class));
+        }
+
+        @Test
+        @DisplayName("deve decrementar estoque apenas uma vez quando reserva ja existe")
+        void deveDecrementarEstoqueApenasUmaVezQuandoReservaJaExiste() {
+            ReservaEstoque reservaExistente = new ReservaEstoque("reserva-abc", "ABC-123", 5, "pedido-001");
+
+            when(reservaRepository.existsByPedidoIdAndSku("pedido-001", "ABC-123")).thenReturn(true);
+            when(reservaRepository.buscarPorPedidoIdESku("pedido-001", "ABC-123"))
+                    .thenReturn(Optional.of(reservaExistente));
+
+            estoqueService.reservar("pedido-001", "ABC-123", 5);
+
+            assertThat(teclado.getQuantidade()).isEqualTo(42); // nao decrementado
+            verify(itemRepository, never()).salvar(any());
         }
     }
 }

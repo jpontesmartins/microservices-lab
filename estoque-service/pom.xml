@@ -73,6 +73,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Flyway - gerenciamento de migrations do banco -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
         <!-- testes -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
