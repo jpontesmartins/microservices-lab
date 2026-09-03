@@ -122,8 +122,8 @@ services:
       keycloak:
         condition: service_started
     environment:
-      - EUREKA_URI=http://discovery:8761/eureka
-      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
+      - EUREKA_URI=${EUREKA_URI}
+      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
       - "8080:8080"
@@ -148,10 +148,10 @@ services:
       postgres-vendas:
         condition: service_healthy
     environment:
-      - EUREKA_URI=http://discovery:8761/eureka
-      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_URL=http://schema-registry:8087
+      - EUREKA_URI=${EUREKA_URI}
+      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - SCHEMA_REGISTRY_URL=${SCHEMA_REGISTRY_URL}
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vendas:5432/${POSTGRES_VENDAS_DB}
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_VENDAS_USER}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_VENDAS_PASSWORD}
@@ -175,8 +175,8 @@ services:
       postgres-estoque:
         condition: service_healthy
     environment:
-      - EUREKA_URI=http://discovery:8761/eureka
-      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
+      - EUREKA_URI=${EUREKA_URI}
+      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-estoque:5432/${POSTGRES_ESTOQUE_DB}
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_ESTOQUE_USER}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_ESTOQUE_PASSWORD}
@@ -198,8 +198,8 @@ services:
       keycloak:
         condition: service_started
     environment:
-      - EUREKA_URI=http://discovery:8761/eureka
-      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
+      - EUREKA_URI=${EUREKA_URI}
+      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
       - "8083:8083"
@@ -218,8 +218,8 @@ services:
       keycloak:
         condition: service_started
     environment:
-      - EUREKA_URI=http://discovery:8761/eureka
-      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
+      - EUREKA_URI=${EUREKA_URI}
+      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
       - "8084:8084"
@@ -239,10 +239,10 @@ services:
       schema-registry:
         condition: service_healthy
     environment:
-      - EUREKA_URI=http://discovery:8761/eureka
-      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_URL=http://schema-registry:8087
+      - EUREKA_URI=${EUREKA_URI}
+      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - SCHEMA_REGISTRY_URL=${SCHEMA_REGISTRY_URL}
     ports:
       - "8085:8085"
     networks:
@@ -261,10 +261,10 @@ services:
       schema-registry:
         condition: service_healthy
     environment:
-      - EUREKA_URI=http://discovery:8761/eureka
-      - ZIPKIN_BASE_URL=http://host.docker.internal:9411
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_URL=http://schema-registry:8087
+      - EUREKA_URI=${EUREKA_URI}
+      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - SCHEMA_REGISTRY_URL=${SCHEMA_REGISTRY_URL}
     ports:
       - "8086:8086"
     networks:
