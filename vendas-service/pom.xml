@@ -155,6 +155,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Flyway - gerenciamento de migrations do banco -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
         <!-- H2, banco em memoria para testes -->
         <dependency>
             <groupId>com.h2database</groupId>
