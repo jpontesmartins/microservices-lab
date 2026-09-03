@@ -8,7 +8,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - "2181:2181"
+      - "${ZOOKEEPER_PORT}:2181"
     networks:
       - ms-net
     healthcheck:
@@ -31,8 +31,8 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     ports:
-      - "9092:9092"
-      - "29092:29092"
+      - "${KAFKA_PORT}:9092"
+      - "${KAFKA_HOST_PORT}:29092"
     networks:
       - ms-net
     healthcheck:
@@ -52,7 +52,7 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8087
     ports:
-      - "8087:8087"
+      - "${SCHEMA_REGISTRY_PORT}:8087"
     networks:
       - ms-net
     healthcheck:
@@ -68,7 +68,7 @@ services:
       schema-registry:
         condition: service_healthy
     ports:
-      - "8089:8080"
+      - "${KAFKA_UI_PORT}:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
@@ -83,7 +83,7 @@ services:
       dockerfile: Dockerfile
     container_name: discovery
     ports:
-      - "8761:8761"
+      - "${DISCOVERY_PORT}:8761"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/"]
       interval: 10s
@@ -104,7 +104,7 @@ services:
       KC_HOSTNAME: keycloak
       KC_HOSTNAME_STRICT: "false"
     ports:
-      - "8180:8180"
+      - "${KEYCLOAK_PORT}:8180"
     volumes:
       - ./config/keycloak:/opt/keycloak/data/import
     networks:
@@ -126,7 +126,7 @@ services:
       - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
-      - "8080:8080"
+      - "${API_GATEWAY_PORT}:8080"
     networks:
       - ms-net
 
@@ -157,7 +157,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_VENDAS_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
-      - "8081:8081"
+      - "${VENDAS_PORT}:8081"
     networks:
       - ms-net
 
@@ -182,7 +182,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_ESTOQUE_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
-      - "8082:8082"
+      - "${ESTOQUE_PORT}:8082"
     networks:
       - ms-net
 
@@ -202,7 +202,7 @@ services:
       - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
-      - "8083:8083"
+      - "${PAGAMENTO_PORT}:8083"
     networks:
       - ms-net
 
@@ -222,7 +222,7 @@ services:
       - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
-      - "8084:8084"
+      - "${FRETE_PORT}:8084"
     networks:
       - ms-net
 
@@ -244,7 +244,7 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
       - SCHEMA_REGISTRY_URL=${SCHEMA_REGISTRY_URL}
     ports:
-      - "8085:8085"
+      - "${TRANSPORTADORA_PORT}:8085"
     networks:
       - ms-net
 
@@ -266,7 +266,7 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
       - SCHEMA_REGISTRY_URL=${SCHEMA_REGISTRY_URL}
     ports:
-      - "8086:8086"
+      - "${NOTIFICACAO_PORT}:8086"
     networks:
       - ms-net
 
