@@ -7,3 +7,5 @@ target/
 .env
 .env.local
 *.pem
+CRITICO.md
+PROXIMOS_PASSOS.md
