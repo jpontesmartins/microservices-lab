@@ -4,3 +4,6 @@ target/
 .DS_Store
 *.log
 .m2/
+.env
+.env.local
+*.pem

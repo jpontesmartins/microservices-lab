@@ -3,9 +3,9 @@ spring:
     name: estoque-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/estoque
-    username: estoque
-    password: estoque
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/estoque}
+    username: ${SPRING_DATASOURCE_USERNAME:estoque}
+    password: ${SPRING_DATASOURCE_PASSWORD:estoque}
 
   jpa:
     hibernate:
