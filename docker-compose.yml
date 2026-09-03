@@ -278,7 +278,7 @@ services:
       POSTGRES_USER: ${POSTGRES_VENDAS_USER}
       POSTGRES_PASSWORD: ${POSTGRES_VENDAS_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_VENDAS_PORT}:5432"
     networks:
       - ms-net
     healthcheck:
@@ -295,7 +295,7 @@ services:
       POSTGRES_USER: ${POSTGRES_ESTOQUE_USER}
       POSTGRES_PASSWORD: ${POSTGRES_ESTOQUE_PASSWORD}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_ESTOQUE_PORT}:5432"
     networks:
       - ms-net
     healthcheck:
