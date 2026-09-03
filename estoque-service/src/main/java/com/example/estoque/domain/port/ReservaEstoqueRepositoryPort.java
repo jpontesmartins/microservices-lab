@@ -11,4 +11,8 @@ public interface ReservaEstoqueRepositoryPort {
     Optional<ReservaEstoque> buscarPorId(String id);
 
     void removerPorId(String id);
+
+    boolean existsByPedidoIdAndSku(String pedidoId, String sku);
+
+    Optional<ReservaEstoque> buscarPorPedidoIdESku(String pedidoId, String sku);
 }

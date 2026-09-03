@@ -17,16 +17,20 @@ import com.example.vendas.shared.exception.BusinessException;
 import com.example.vendas.shared.exception.TransientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class PedidoService {
 
     private static final Logger log = LoggerFactory.getLogger(PedidoService.class);
+    private static final Pattern IDEMPOTENCY_KEY_PATTERN = Pattern.compile("^[a-zA-Z0-9\\-]+$");
+    private static final int IDEMPOTENCY_KEY_MAX_LENGTH = 128;
 
     private final IntegracoesPort integracoes;
     private final PedidoRepositoryPort pedidoRepository;
@@ -45,13 +49,26 @@ public class PedidoService {
      * Ao finalizar, publica na fila o pedido criado
      * Em caso de falha, executa transacoes compensatorias (best-effort).
      *
+     * Suporta idempotencia via Idempotency-Key: se fornecido, usa como pedidoId;
+     * se ja existe pedido com esse ID, retorna o existente sem reprocessar.
+     *
      * @param request dados do pedido a ser criado
+     * @param idempotencyKey chave de idempotencia (opcional, header Idempotency-Key)
      * @return resposta do pedido com status e identificadores das integracoes
      */
-    public PedidoResponse criarPedido(CriarPedidoRequest request) {
+    public PedidoResponse criarPedido(CriarPedidoRequest request, String idempotencyKey) {
         validar(request);
+        validarIdempotencyKey(idempotencyKey);
 
-        String pedidoId = UUID.randomUUID().toString();
+        String pedidoId = (idempotencyKey != null && !idempotencyKey.isBlank())
+                ? idempotencyKey
+                : UUID.randomUUID().toString();
+
+        if (pedidoRepository.existsById(pedidoId)) {
+            log.info("Pedido ja existe, retornando existente (pedidoId={})", pedidoId);
+            return toResponse(pedidoRepository.buscarPorId(pedidoId).orElseThrow());
+        }
+
         log.info("Iniciando fluxo de pedido (pedidoId={}, cepDestino={}, totalItens={})",
                 pedidoId, request.cepDestino(), request.items().size());
 
@@ -59,7 +76,12 @@ public class PedidoService {
         for (ItemPedidoRequest itemReq : request.items()) {
             pedido.adicionarItem(ItemPedido.criar(itemReq.sku(), itemReq.quantidade(), itemReq.valor()));
         }
-        pedidoRepository.salvar(pedido);
+        try {
+            pedidoRepository.salvar(pedido);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Pedido duplicado detectado via concorrencia, retornando existente (pedidoId={})", pedidoId);
+            return toResponse(pedidoRepository.buscarPorId(pedidoId).orElseThrow());
+        }
 
         // === Etapa 1: Reserva de Estoque (por item) ===
         for (ItemPedido item : pedido.getItems()) {
@@ -251,6 +273,22 @@ public class PedidoService {
             }
             if (item.valor() <= 0) {
                 throw new IllegalArgumentException("item[" + i + "].valor deve ser > 0");
+            }
+        }
+    }
+
+    private static void validarIdempotencyKey(String key) {
+        if (key != null) {
+            if (key.isBlank()) {
+                throw new IllegalArgumentException("Idempotency-Key nao pode ser vazio");
+            }
+            if (key.length() > IDEMPOTENCY_KEY_MAX_LENGTH) {
+                throw new IllegalArgumentException(
+                        "Idempotency-Key maximo " + IDEMPOTENCY_KEY_MAX_LENGTH + " caracteres");
+            }
+            if (!IDEMPOTENCY_KEY_PATTERN.matcher(key).matches()) {
+                throw new IllegalArgumentException(
+                        "Idempotency-Key deve conter apenas alfanumerico e hifens");
             }
         }
     }

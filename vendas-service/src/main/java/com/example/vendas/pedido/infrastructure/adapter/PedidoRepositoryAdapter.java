@@ -31,6 +31,11 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
         return jpaRepository.findById(pedidoId).map(this::toDomain);
     }
 
+    @Override
+    public boolean existsById(String pedidoId) {
+        return jpaRepository.existsById(pedidoId);
+    }
+
     private PedidoEntity toEntity(Pedido pedido) {
         PedidoEntity entity = new PedidoEntity(
                 pedido.getPedidoId(),

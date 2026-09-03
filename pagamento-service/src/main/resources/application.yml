@@ -1,6 +1,22 @@
 spring:
   application:
     name: pagamento-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5434/pagamento}
+    username: ${SPRING_DATASOURCE_USERNAME:pagamento}
+    password: ${SPRING_DATASOURCE_PASSWORD:pagamento}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
   security:
     oauth2:
       resourceserver:

@@ -197,9 +197,14 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
+      postgres-pagamento:
+        condition: service_healthy
     environment:
       - EUREKA_URI=${EUREKA_URI}
       - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-pagamento:5432/${POSTGRES_PAGAMENTO_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_PAGAMENTO_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PAGAMENTO_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
       - "${PAGAMENTO_PORT}:8083"
@@ -296,6 +301,23 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_ESTOQUE_PASSWORD}
     ports:
       - "${POSTGRES_ESTOQUE_PORT}:5432"
+    networks:
+      - ms-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-pagamento:
+    image: postgres:14
+    container_name: postgres-pagamento
+    environment:
+      POSTGRES_DB: ${POSTGRES_PAGAMENTO_DB}
+      POSTGRES_USER: ${POSTGRES_PAGAMENTO_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PAGAMENTO_PASSWORD}
+    ports:
+      - "${POSTGRES_PAGAMENTO_PORT}:5432"
     networks:
       - ms-net
     healthcheck:

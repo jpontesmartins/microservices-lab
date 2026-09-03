@@ -13,4 +13,6 @@ public interface PedidoRepositoryPort {
     void salvar(Pedido pedido);
 
     Optional<Pedido> buscarPorId(String pedidoId);
+
+    boolean existsById(String pedidoId);
 }

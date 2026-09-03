@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -28,12 +29,15 @@ public class PedidoController {
     }
 
     @PostMapping("/vendas/pedidos")
-    public ResponseEntity<?> criar(@RequestBody CriarPedidoRequest request) {
-        log.info("Recebida requisicao de criacao de pedido (totalItens={}, cepDestino={})",
+    public ResponseEntity<?> criar(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestBody CriarPedidoRequest request) {
+        log.info("Recebida requisicao de criacao de pedido (totalItens={}, cepDestino={}, idempotencyKey={})",
                 request != null && request.items() != null ? request.items().size() : 0,
-                request != null ? request.cepDestino() : null);
+                request != null ? request.cepDestino() : null,
+                idempotencyKey != null ? idempotencyKey.substring(0, Math.min(idempotencyKey.length(), 16)) + "..." : "none");
         try {
-            PedidoResponse response = pedidos.criarPedido(request);
+            PedidoResponse response = pedidos.criarPedido(request, idempotencyKey);
             log.info("Pedido processado com sucesso (pedidoId={}, status={})", response.pedidoId(), response.status());
             return ResponseEntity.ok(response);
         } catch (BusinessException e) {

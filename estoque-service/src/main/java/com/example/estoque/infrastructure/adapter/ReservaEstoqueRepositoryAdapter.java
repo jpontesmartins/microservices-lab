@@ -6,6 +6,7 @@ import com.example.estoque.infrastructure.entity.ItemEstoqueEntity;
 import com.example.estoque.infrastructure.entity.ReservaEstoqueEntity;
 import com.example.estoque.infrastructure.repository.ItemEstoqueJpaRepository;
 import com.example.estoque.infrastructure.repository.ReservaEstoqueJpaRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -24,12 +25,17 @@ public class ReservaEstoqueRepositoryAdapter implements ReservaEstoqueRepository
 
     @Override
     public ReservaEstoque salvar(ReservaEstoque reserva) {
-        ItemEstoqueEntity itemEntity = itemEstoqueJpaRepository.findById(reserva.getSku())
-                .orElseThrow(() -> new IllegalArgumentException("SKU nao encontrado: " + reserva.getSku()));
-        ReservaEstoqueEntity entity = new ReservaEstoqueEntity(
-                reserva.getId(), itemEntity, reserva.getQuantidade(), reserva.getPedidoId());
-        jpaRepository.save(entity);
-        return reserva;
+        try {
+            ItemEstoqueEntity itemEntity = itemEstoqueJpaRepository.findById(reserva.getSku())
+                    .orElseThrow(() -> new IllegalArgumentException("SKU nao encontrado: " + reserva.getSku()));
+            ReservaEstoqueEntity entity = new ReservaEstoqueEntity(
+                    reserva.getId(), itemEntity, reserva.getQuantidade(), reserva.getPedidoId());
+            jpaRepository.save(entity);
+            return reserva;
+        } catch (DataIntegrityViolationException e) {
+            return buscarPorPedidoIdESku(reserva.getPedidoId(), reserva.getSku())
+                    .orElseThrow(() -> e);
+        }
     }
 
     @Override
@@ -41,5 +47,16 @@ public class ReservaEstoqueRepositoryAdapter implements ReservaEstoqueRepository
     @Override
     public void removerPorId(String id) {
         jpaRepository.deleteById(id);
+    }
+
+    @Override
+    public boolean existsByPedidoIdAndSku(String pedidoId, String sku) {
+        return jpaRepository.existsByPedidoIdAndItemSku(pedidoId, sku);
+    }
+
+    @Override
+    public Optional<ReservaEstoque> buscarPorPedidoIdESku(String pedidoId, String sku) {
+        return jpaRepository.findByPedidoIdAndItemSku(pedidoId, sku)
+                .map(e -> new ReservaEstoque(e.getId(), e.getItem().getSku(), e.getQuantidade(), e.getPedidoId()));
     }
 }
