@@ -152,9 +152,9 @@ services:
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SCHEMA_REGISTRY_URL=http://schema-registry:8087
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vendas:5432/vendas
-      - SPRING_DATASOURCE_USERNAME=vendas
-      - SPRING_DATASOURCE_PASSWORD=vendas
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vendas:5432/${POSTGRES_VENDAS_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_VENDAS_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_VENDAS_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
       - "8081:8081"
@@ -177,9 +177,9 @@ services:
     environment:
       - EUREKA_URI=http://discovery:8761/eureka
       - ZIPKIN_BASE_URL=http://host.docker.internal:9411
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-estoque:5432/estoque
-      - SPRING_DATASOURCE_USERNAME=estoque
-      - SPRING_DATASOURCE_PASSWORD=estoque
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-estoque:5432/${POSTGRES_ESTOQUE_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_ESTOQUE_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_ESTOQUE_PASSWORD}
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8180/realms/microservices
     ports:
       - "8082:8082"
@@ -274,15 +274,15 @@ services:
     image: postgres:14
     container_name: postgres-vendas
     environment:
-      POSTGRES_DB: vendas
-      POSTGRES_USER: vendas
-      POSTGRES_PASSWORD: vendas
+      POSTGRES_DB: ${POSTGRES_VENDAS_DB}
+      POSTGRES_USER: ${POSTGRES_VENDAS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_VENDAS_PASSWORD}
     ports:
       - "5432:5432"
     networks:
       - ms-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vendas -d vendas"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -291,15 +291,15 @@ services:
     image: postgres:14
     container_name: postgres-estoque
     environment:
-      POSTGRES_DB: estoque
-      POSTGRES_USER: estoque
-      POSTGRES_PASSWORD: estoque
+      POSTGRES_DB: ${POSTGRES_ESTOQUE_DB}
+      POSTGRES_USER: ${POSTGRES_ESTOQUE_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_ESTOQUE_PASSWORD}
     ports:
       - "5433:5432"
     networks:
       - ms-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U estoque -d estoque"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
