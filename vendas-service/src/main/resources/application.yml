@@ -158,6 +158,11 @@ resilience4j:
         ignoreExceptions:
           - com.example.vendas.shared.exception.BusinessException
 
+outbox:
+  polling-interval: 5000
+  initial-delay: 2000
+  batch-size: 50
+
 logging:
   pattern:
     level: "%5p [%X{traceId:-},%X{spanId:-}]"

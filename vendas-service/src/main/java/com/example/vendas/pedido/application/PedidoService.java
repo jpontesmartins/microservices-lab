@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,6 +57,7 @@ public class PedidoService {
      * @param idempotencyKey chave de idempotencia (opcional, header Idempotency-Key)
      * @return resposta do pedido com status e identificadores das integracoes
      */
+    @Transactional
     public PedidoResponse criarPedido(CriarPedidoRequest request, String idempotencyKey) {
         validar(request);
         validarIdempotencyKey(idempotencyKey);
@@ -189,6 +191,7 @@ public class PedidoService {
      * @param pedidoId identificador do pedido
      * @return resposta do pedido ou null se nao encontrado
      */
+    @Transactional(readOnly = true)
     public PedidoResponse buscar(String pedidoId) {
         log.info("Buscando pedido no repositorio (pedidoId={})", pedidoId);
         return pedidoRepository.buscarPorId(pedidoId)

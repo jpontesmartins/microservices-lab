@@ -3,6 +3,7 @@ package com.example.vendas;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Classe principal do microserviço de vendas.
@@ -10,6 +11,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  */
 @SpringBootApplication
 @EnableFeignClients
+@EnableScheduling
 public class VendasServiceApplication {
 
     /**
