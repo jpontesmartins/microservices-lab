@@ -1,6 +1,7 @@
 package com.example.vendas.pedido.infrastructure;
 
 import com.example.vendas.pedido.application.PedidoService;
+import com.example.vendas.pedido.domain.port.CompensacaoRepositoryPort;
 import com.example.vendas.pedido.domain.port.IntegracoesPort;
 import com.example.vendas.pedido.domain.port.IntegracoesPort.FreteResult;
 import com.example.vendas.pedido.domain.port.IntegracoesPort.PagamentoResult;
@@ -35,6 +36,9 @@ class OutboxSuccessTest {
 
     @MockBean
     private IntegracoesPort integracoes;
+
+    @MockBean
+    private CompensacaoRepositoryPort compensacaoRepository;
 
     @Autowired
     private OutboxEventoJpaRepository outboxJpaRepository;

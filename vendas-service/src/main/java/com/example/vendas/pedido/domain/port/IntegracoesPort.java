@@ -12,10 +12,6 @@ public interface IntegracoesPort {
 
     PagamentoResult processarPagamento(String pedidoId, double valor);
 
-    void cancelarReservaBestEffort(String reservaId);
-
-    void cancelarFreteBestEffort(String freteId);
-
     record ReservaEstoqueResult(String reservaId, String status) {
     }
 

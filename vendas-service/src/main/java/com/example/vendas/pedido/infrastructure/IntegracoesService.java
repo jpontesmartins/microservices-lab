@@ -150,27 +150,4 @@ public class IntegracoesService implements IntegracoesPort {
         };
     }
 
-    @Override
-    public void cancelarReservaBestEffort(String reservaId) {
-        if (reservaId == null || reservaId.isBlank()) {
-            return;
-        }
-        try {
-            estoqueClient.cancelarReserva(reservaId);
-        } catch (Exception e) {
-            log.warn("Compensacao best-effort falhou (reservaId={}): {}", reservaId, e.toString());
-        }
-    }
-
-    @Override
-    public void cancelarFreteBestEffort(String freteId) {
-        if (freteId == null || freteId.isBlank()) {
-            return;
-        }
-        try {
-            freteClient.cancelar(freteId);
-        } catch (Exception e) {
-            log.warn("Compensacao de frete best-effort falhou (freteId={}): {}", freteId, e.toString());
-        }
-    }
 }

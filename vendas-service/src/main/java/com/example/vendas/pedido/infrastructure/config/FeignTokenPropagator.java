@@ -13,6 +13,12 @@ public class FeignTokenPropagator implements RequestInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(FeignTokenPropagator.class);
 
+    private final ServiceTokenProvider serviceTokenProvider;
+
+    public FeignTokenPropagator(ServiceTokenProvider serviceTokenProvider) {
+        this.serviceTokenProvider = serviceTokenProvider;
+    }
+
     @Override
     public void apply(RequestTemplate template) {
         ServletRequestAttributes attrs = (ServletRequestAttributes)
@@ -22,11 +28,16 @@ public class FeignTokenPropagator implements RequestInterceptor {
             if (authHeader != null && !authHeader.isBlank()) {
                 template.header("Authorization", authHeader);
                 log.debug("Token propagado para downstream service via Feign");
-            } else {
-                log.warn("Header Authorization nao encontrado na request original");
+                return;
             }
+        }
+
+        String serviceToken = serviceTokenProvider.getToken();
+        if (serviceToken != null) {
+            template.header("Authorization", serviceToken);
+            log.debug("Token de servico obtido via client_credentials para Feign");
         } else {
-            log.warn("ServletRequestAttributes nao disponível - token nao propagado");
+            log.warn("Nenhum token disponivel (nem do request nem de servico)");
         }
     }
 }

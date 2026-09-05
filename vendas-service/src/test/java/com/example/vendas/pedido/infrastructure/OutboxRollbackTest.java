@@ -2,6 +2,7 @@ package com.example.vendas.pedido.infrastructure;
 
 import com.example.vendas.pedido.application.PedidoService;
 import com.example.vendas.pedido.domain.model.Pedido;
+import com.example.vendas.pedido.domain.port.CompensacaoRepositoryPort;
 import com.example.vendas.pedido.domain.port.EventoPublicacaoPort;
 import com.example.vendas.pedido.domain.port.IntegracoesPort;
 import com.example.vendas.pedido.domain.port.IntegracoesPort.FreteResult;
@@ -45,6 +46,9 @@ class OutboxRollbackTest {
 
     @MockBean
     private EventoPublicacaoPort eventoPublicacao;
+
+    @MockBean
+    private CompensacaoRepositoryPort compensacaoRepository;
 
     @Autowired
     private OutboxEventoJpaRepository outboxJpaRepository;

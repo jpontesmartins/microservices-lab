@@ -57,6 +57,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/vendas/whoami").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/vendas/compensacoes/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
