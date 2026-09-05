@@ -163,6 +163,11 @@ outbox:
   initial-delay: 2000
   batch-size: 50
 
+compensacao:
+  polling-interval: 5000
+  initial-delay: 2000
+  max-attempts: 3
+
 logging:
   pattern:
     level: "%5p [%X{traceId:-},%X{spanId:-}]"

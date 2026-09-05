@@ -3,6 +3,8 @@ package com.example.vendas.pedido.application;
 import com.example.vendas.pedido.domain.model.ItemPedido;
 import com.example.vendas.pedido.domain.model.Pedido;
 import com.example.vendas.pedido.domain.model.StatusPedido;
+import com.example.vendas.pedido.domain.model.TipoCompensacao;
+import com.example.vendas.pedido.domain.port.CompensacaoRepositoryPort;
 import com.example.vendas.pedido.domain.port.EventoPublicacaoPort;
 import com.example.vendas.pedido.domain.port.IntegracoesPort;
 import com.example.vendas.pedido.domain.port.IntegracoesPort.FreteResult;
@@ -36,12 +38,14 @@ public class PedidoService {
     private final IntegracoesPort integracoes;
     private final PedidoRepositoryPort pedidoRepository;
     private final EventoPublicacaoPort eventoPublicacao;
+    private final CompensacaoRepositoryPort compensacaoRepository;
 
     public PedidoService(IntegracoesPort integracoes, PedidoRepositoryPort pedidoRepository,
-            EventoPublicacaoPort eventoPublicacao) {
+            EventoPublicacaoPort eventoPublicacao, CompensacaoRepositoryPort compensacaoRepository) {
         this.integracoes = integracoes;
         this.pedidoRepository = pedidoRepository;
         this.eventoPublicacao = eventoPublicacao;
+        this.compensacaoRepository = compensacaoRepository;
     }
 
     /**
@@ -200,32 +204,33 @@ public class PedidoService {
     }
 
     private void compensarEstoque(Pedido pedido) {
-        log.info("Iniciando compensacao best-effort de estoque (pedidoId={})", pedido.getPedidoId());
+        log.info("Registrando compensacao de estoque na tabela (pedidoId={})", pedido.getPedidoId());
         for (ItemPedido item : pedido.getItems()) {
-            if (item.getReservaId() != null) {
-                integracoes.cancelarReservaBestEffort(item.getReservaId());
-                log.info("Compensacao de estoque realizada (pedidoId={}, sku={}, reservaId={})",
+            if (item.getReservaId() != null && !item.getReservaId().isBlank()) {
+                compensacaoRepository.salvarCompensacao(
+                        pedido.getPedidoId(), TipoCompensacao.ESTOQUE, item.getReservaId(), 3);
+                log.info("Compensacao de estoque registrada (pedidoId={}, sku={}, reservaId={})",
                         pedido.getPedidoId(), item.getSku(), item.getReservaId());
             }
         }
-        log.info("Compensacao best-effort de estoque concluida (pedidoId={})", pedido.getPedidoId());
     }
 
     private void compensarEstoqueEFrete(Pedido pedido) {
-        log.info("Iniciando compensacao best-effort de estoque e frete (pedidoId={})", pedido.getPedidoId());
+        log.info("Registrando compensacoes de estoque e frete na tabela (pedidoId={})", pedido.getPedidoId());
         for (ItemPedido item : pedido.getItems()) {
-            if (item.getReservaId() != null) {
-                integracoes.cancelarReservaBestEffort(item.getReservaId());
-                log.info("Compensacao de estoque realizada (pedidoId={}, sku={}, reservaId={})",
+            if (item.getReservaId() != null && !item.getReservaId().isBlank()) {
+                compensacaoRepository.salvarCompensacao(
+                        pedido.getPedidoId(), TipoCompensacao.ESTOQUE, item.getReservaId(), 3);
+                log.info("Compensacao de estoque registrada (pedidoId={}, sku={}, reservaId={})",
                         pedido.getPedidoId(), item.getSku(), item.getReservaId());
             }
-            if (item.getFreteId() != null) {
-                integracoes.cancelarFreteBestEffort(item.getFreteId());
-                log.info("Compensacao de frete realizada (pedidoId={}, sku={}, freteId={})",
+            if (item.getFreteId() != null && !item.getFreteId().isBlank()) {
+                compensacaoRepository.salvarCompensacao(
+                        pedido.getPedidoId(), TipoCompensacao.FRETE, item.getFreteId(), 3);
+                log.info("Compensacao de frete registrada (pedidoId={}, sku={}, freteId={})",
                         pedido.getPedidoId(), item.getSku(), item.getFreteId());
             }
         }
-        log.info("Compensacao best-effort de estoque e frete concluida (pedidoId={})", pedido.getPedidoId());
     }
 
     static PedidoResponse toResponse(Pedido pedido) {

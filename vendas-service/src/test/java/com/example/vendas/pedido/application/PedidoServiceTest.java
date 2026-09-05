@@ -1,5 +1,7 @@
 package com.example.vendas.pedido.application;
 
+import com.example.vendas.pedido.domain.model.TipoCompensacao;
+import com.example.vendas.pedido.domain.port.CompensacaoRepositoryPort;
 import com.example.vendas.pedido.domain.port.EventoPublicacaoPort;
 import com.example.vendas.pedido.domain.port.IntegracoesPort;
 import com.example.vendas.pedido.domain.port.IntegracoesPort.FreteResult;
@@ -56,6 +58,9 @@ class PedidoServiceTest {
 
     @Mock
     private EventoPublicacaoPort eventoPublicacao;
+
+    @Mock
+    private CompensacaoRepositoryPort compensacaoRepository;
 
     @InjectMocks
     private PedidoService pedidoService;
@@ -193,7 +198,8 @@ class PedidoServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex -> assertThat(((BusinessException) ex).getStatus()).isEqualTo("FALHA_FRETE"));
 
-            verify(integracoes).cancelarReservaBestEffort("reserva-001");
+            verify(compensacaoRepository).salvarCompensacao(
+                    anyString(), eq(TipoCompensacao.ESTOQUE), eq("reserva-001"), eq(3));
             verify(integracoes, never()).processarPagamento(anyString(), anyDouble());
             verify(pedidoRepository, times(3)).salvar(any());
         }
@@ -209,7 +215,8 @@ class PedidoServiceTest {
             assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
                     .isInstanceOf(TransientException.class);
 
-            verify(integracoes).cancelarReservaBestEffort("reserva-001");
+            verify(compensacaoRepository).salvarCompensacao(
+                    anyString(), eq(TipoCompensacao.ESTOQUE), eq("reserva-001"), eq(3));
             verify(pedidoRepository, times(3)).salvar(any());
         }
 
@@ -225,7 +232,8 @@ class PedidoServiceTest {
             assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
                     .isInstanceOf(TransientException.class);
 
-            verify(integracoes).cancelarReservaBestEffort("reserva-001");
+            verify(compensacaoRepository).salvarCompensacao(
+                    anyString(), eq(TipoCompensacao.ESTOQUE), eq("reserva-001"), eq(3));
             verify(pedidoRepository, times(3)).salvar(any());
         }
 
@@ -242,8 +250,10 @@ class PedidoServiceTest {
             assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
                     .isInstanceOf(TransientException.class);
 
-            verify(integracoes).cancelarReservaBestEffort("reserva-001");
-            verify(integracoes).cancelarFreteBestEffort("frete-001");
+            verify(compensacaoRepository).salvarCompensacao(
+                    anyString(), eq(TipoCompensacao.ESTOQUE), eq("reserva-001"), eq(3));
+            verify(compensacaoRepository).salvarCompensacao(
+                    anyString(), eq(TipoCompensacao.FRETE), eq("frete-001"), eq(3));
             verify(pedidoRepository, times(4)).salvar(any());
         }
 
@@ -261,8 +271,10 @@ class PedidoServiceTest {
             assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
                     .isInstanceOf(TransientException.class);
 
-            verify(integracoes).cancelarReservaBestEffort("reserva-001");
-            verify(integracoes).cancelarFreteBestEffort("frete-001");
+            verify(compensacaoRepository).salvarCompensacao(
+                    anyString(), eq(TipoCompensacao.ESTOQUE), eq("reserva-001"), eq(3));
+            verify(compensacaoRepository).salvarCompensacao(
+                    anyString(), eq(TipoCompensacao.FRETE), eq("frete-001"), eq(3));
             verify(pedidoRepository, times(4)).salvar(any());
         }
 
@@ -281,8 +293,10 @@ class PedidoServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex -> assertThat(((BusinessException) ex).getStatus()).isEqualTo("FALHA_PAGAMENTO"));
 
-            verify(integracoes).cancelarReservaBestEffort("reserva-001");
-            verify(integracoes).cancelarFreteBestEffort("frete-001");
+            verify(compensacaoRepository).salvarCompensacao(
+                    anyString(), eq(TipoCompensacao.ESTOQUE), eq("reserva-001"), eq(3));
+            verify(compensacaoRepository).salvarCompensacao(
+                    anyString(), eq(TipoCompensacao.FRETE), eq("frete-001"), eq(3));
             verify(pedidoRepository, times(4)).salvar(any());
         }
     }
