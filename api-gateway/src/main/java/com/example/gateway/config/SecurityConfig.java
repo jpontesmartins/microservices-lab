@@ -4,7 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoders;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import reactor.core.publisher.Flux;
@@ -23,6 +23,8 @@ import java.util.List;
  * </ul>
  *
  * <p>Stack: Spring Security WebFlux + ReactiveJwtDecoder + ReactiveJwtAuthenticationConverter.
+ * O {@code ReactiveJwtDecoder} é auto-configurado pelo Spring Boot a partir de
+ * {@code spring.security.oauth2.resourceserver.jwt.issuer-uri} no application.yml.
  *
  * @see org.springframework.security.oauth2.jwt.ReactiveJwtDecoders
  */
@@ -37,11 +39,15 @@ public class SecurityConfig {
      * define as regras de autorização por path e integra o Resource Server
      * JWT com decoder e conversor de authorities customizados.
      *
+     * <p>O {@code ReactiveJwtDecoder} é injetado via auto-configuração do Spring Boot
+     * (não hardcoded), lendo a URI do issuer de {@code application.yml}.
+     *
      * @param http configuração do ServerHttpSecurity
+     * @param decoder decoder JWT auto-configurado via YAML
      * @return {@link SecurityWebFilterChain} construída
      */
     @Bean
-    public SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http) {
+    public SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http, ReactiveJwtDecoder decoder) {
         http
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange(exchanges -> exchanges
@@ -51,25 +57,11 @@ public class SecurityConfig {
             )
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt
-                    .jwtDecoder(jwtDecoder())
+                    .jwtDecoder(decoder)
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
                 )
             );
         return http.build();
-    }
-
-    /**
-     * Decoder JWT reativo que valida tokens contra o Keycloak.
-     *
-     * <p>Obtém as chaves públicas via {@code .well-known/openid-configuration}
-     * do issuer {@code http://keycloak:8180/realms/microservices}.
-     *
-     * @return {@link org.springframework.security.oauth2.jwt.ReactiveJwtDecoder}
-     */
-    @Bean
-    public org.springframework.security.oauth2.jwt.ReactiveJwtDecoder jwtDecoder() {
-        return ReactiveJwtDecoders.fromIssuerLocation(
-            "http://keycloak:8180/realms/microservices");
     }
 
     /**
