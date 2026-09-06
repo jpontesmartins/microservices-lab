@@ -1,5 +1,8 @@
 version: "3.9"
 
+# Docker Compose para PRODUCAO
+# Stack completa com HTTPS, sem ports expostos na host, logs com rotacao
+
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -7,10 +10,14 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "${ZOOKEEPER_PORT}:2181"
     networks:
       - ms-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
       interval: 10s
@@ -26,15 +33,18 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    ports:
-      - "${KAFKA_PORT}:9092"
-      - "${KAFKA_HOST_PORT}:29092"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
     networks:
       - ms-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 10s
@@ -51,96 +61,102 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8087
-    ports:
-      - "${SCHEMA_REGISTRY_PORT}:8087"
     networks:
       - ms-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8087/subjects"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui
-    depends_on:
-      schema-registry:
-        condition: service_healthy
-    ports:
-      - "${KAFKA_UI_PORT}:8080"
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: keycloak
+    command: start --import-realm
     environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8087
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/certs/tls.crt
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/certs/tls.key
+      KC_HTTP_PORT: 8443
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-localhost}
+    volumes:
+      - ./config/keycloak:/opt/keycloak/data/import:ro
+      - ./certs:/opt/keycloak/certs:ro
     networks:
       - ms-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "/opt/keycloak/bin/kcadm.sh", "get", "/realms/master"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   discovery:
     build:
       context: ./discovery-server
       dockerfile: Dockerfile
     container_name: discovery
-    ports:
-      - "${DISCOVERY_PORT}:8761"
+    networks:
+      - ms-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
-    networks:
-      - ms-net
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:24.0
-    container_name: keycloak
-    command: start-dev --import-realm
-    environment:
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      KC_HTTP_PORT: 8180
-      KC_HOSTNAME: keycloak
-      KC_HOSTNAME_STRICT: "false"
-    ports:
-      - "${KEYCLOAK_PORT}:8180"
-    volumes:
-      - ./config/keycloak:/opt/keycloak/data/import
-    networks:
-      - ms-net
 
   api-gateway:
     build:
       context: ./api-gateway
       dockerfile: Dockerfile
     container_name: api-gateway
-    restart: unless-stopped
+    restart: always
     depends_on:
       discovery:
         condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
     environment:
-      - EUREKA_URI=${EUREKA_URI}
-      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI}
-    ports:
-      - "${API_GATEWAY_PORT}:8080"
+      - EUREKA_URI=http://discovery:8761/eureka
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://${KEYCLOAK_HOSTNAME:-localhost}:8443/realms/microservices
     networks:
       - ms-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   vendas-service:
     build:
       context: ./vendas-service
       dockerfile: Dockerfile
     container_name: vendas-service
-    restart: unless-stopped
+    restart: always
     depends_on:
       discovery:
         condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
       kafka:
         condition: service_healthy
       schema-registry:
@@ -148,94 +164,104 @@ services:
       postgres-vendas:
         condition: service_healthy
     environment:
-      - EUREKA_URI=${EUREKA_URI}
-      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
-      - SCHEMA_REGISTRY_URL=${SCHEMA_REGISTRY_URL}
+      - EUREKA_URI=http://discovery:8761/eureka
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8087
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-vendas:5432/${POSTGRES_VENDAS_DB}
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_VENDAS_USER}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_VENDAS_PASSWORD}
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI}
-    ports:
-      - "${VENDAS_PORT}:8081"
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://${KEYCLOAK_HOSTNAME:-localhost}:8443/realms/microservices
+      - SERVICE_TOKEN_CLIENT_SECRET=${KEYCLOAK_VENDAS_SECRET}
     networks:
       - ms-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   estoque-service:
     build:
       context: ./estoque-service
       dockerfile: Dockerfile
     container_name: estoque-service
-    restart: unless-stopped
+    restart: always
     depends_on:
       discovery:
         condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
       postgres-estoque:
         condition: service_healthy
     environment:
-      - EUREKA_URI=${EUREKA_URI}
-      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
+      - EUREKA_URI=http://discovery:8761/eureka
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-estoque:5432/${POSTGRES_ESTOQUE_DB}
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_ESTOQUE_USER}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_ESTOQUE_PASSWORD}
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI}
-    ports:
-      - "${ESTOQUE_PORT}:8082"
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://${KEYCLOAK_HOSTNAME:-localhost}:8443/realms/microservices
     networks:
       - ms-net
-
-  pagamento-service:
-    build:
-      context: ./pagamento-service
-      dockerfile: Dockerfile
-    container_name: pagamento-service
-    restart: unless-stopped
-    depends_on:
-      discovery:
-        condition: service_healthy
-      keycloak:
-        condition: service_started
-      postgres-pagamento:
-        condition: service_healthy
-    environment:
-      - EUREKA_URI=${EUREKA_URI}
-      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-pagamento:5432/${POSTGRES_PAGAMENTO_DB}
-      - SPRING_DATASOURCE_USERNAME=${POSTGRES_PAGAMENTO_USER}
-      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PAGAMENTO_PASSWORD}
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI}
-    ports:
-      - "${PAGAMENTO_PORT}:8083"
-    networks:
-      - ms-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frete-service:
     build:
       context: ./frete-service
       dockerfile: Dockerfile
     container_name: frete-service
-    restart: unless-stopped
+    restart: always
     depends_on:
       discovery:
         condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
     environment:
-      - EUREKA_URI=${EUREKA_URI}
-      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI}
-    ports:
-      - "${FRETE_PORT}:8084"
+      - EUREKA_URI=http://discovery:8761/eureka
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://${KEYCLOAK_HOSTNAME:-localhost}:8443/realms/microservices
     networks:
       - ms-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  pagamento-service:
+    build:
+      context: ./pagamento-service
+      dockerfile: Dockerfile
+    container_name: pagamento-service
+    restart: always
+    depends_on:
+      discovery:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      postgres-pagamento:
+        condition: service_healthy
+    environment:
+      - EUREKA_URI=http://discovery:8761/eureka
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-pagamento:5432/${POSTGRES_PAGAMENTO_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_PAGAMENTO_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PAGAMENTO_PASSWORD}
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://${KEYCLOAK_HOSTNAME:-localhost}:8443/realms/microservices
+    networks:
+      - ms-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   transportadora-service:
     build:
       context: ./transportadora-service
       dockerfile: Dockerfile
     container_name: transportadora-service
+    restart: always
     depends_on:
       discovery:
         condition: service_healthy
@@ -244,20 +270,23 @@ services:
       schema-registry:
         condition: service_healthy
     environment:
-      - EUREKA_URI=${EUREKA_URI}
-      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
-      - SCHEMA_REGISTRY_URL=${SCHEMA_REGISTRY_URL}
-    ports:
-      - "${TRANSPORTADORA_PORT}:8085"
+      - EUREKA_URI=http://discovery:8761/eureka
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8087
     networks:
       - ms-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   notificacao-service:
     build:
       context: ./notificacao-service
       dockerfile: Dockerfile
     container_name: notificacao-service
+    restart: always
     depends_on:
       discovery:
         condition: service_healthy
@@ -266,14 +295,16 @@ services:
       schema-registry:
         condition: service_healthy
     environment:
-      - EUREKA_URI=${EUREKA_URI}
-      - ZIPKIN_BASE_URL=${ZIPKIN_BASE_URL}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
-      - SCHEMA_REGISTRY_URL=${SCHEMA_REGISTRY_URL}
-    ports:
-      - "${NOTIFICACAO_PORT}:8086"
+      - EUREKA_URI=http://discovery:8761/eureka
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8087
     networks:
       - ms-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   postgres-vendas:
     image: postgres:14
@@ -282,10 +313,14 @@ services:
       POSTGRES_DB: ${POSTGRES_VENDAS_DB}
       POSTGRES_USER: ${POSTGRES_VENDAS_USER}
       POSTGRES_PASSWORD: ${POSTGRES_VENDAS_PASSWORD}
-    ports:
-      - "${POSTGRES_VENDAS_PORT}:5432"
     networks:
       - ms-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -299,10 +334,14 @@ services:
       POSTGRES_DB: ${POSTGRES_ESTOQUE_DB}
       POSTGRES_USER: ${POSTGRES_ESTOQUE_USER}
       POSTGRES_PASSWORD: ${POSTGRES_ESTOQUE_PASSWORD}
-    ports:
-      - "${POSTGRES_ESTOQUE_PORT}:5432"
     networks:
       - ms-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -316,10 +355,14 @@ services:
       POSTGRES_DB: ${POSTGRES_PAGAMENTO_DB}
       POSTGRES_USER: ${POSTGRES_PAGAMENTO_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PAGAMENTO_PASSWORD}
-    ports:
-      - "${POSTGRES_PAGAMENTO_PORT}:5432"
     networks:
       - ms-net
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
