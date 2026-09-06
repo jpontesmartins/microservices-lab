@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/vendas
+    username: vendas
+    password: vendas
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      properties:
+        schema.registry.url: http://localhost:8087
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/microservices
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+service-token:
+  keycloak-url: http://localhost:8180
+  client-secret: ${KEYCLOAK_VENDAS_SECRET:vendas-service-secret}

@@ -32,7 +32,7 @@ public class ServiceTokenProvider {
             @Value("${service-token.keycloak-url:http://keycloak:8180}") String keycloakUrl,
             @Value("${service-token.realm:microservices}") String realm,
             @Value("${service-token.client-id:vendas-service}") String clientId,
-            @Value("${service-token.client-secret:vendas-service-secret}") String clientSecret) {
+            @Value("${service-token.client-secret}") String clientSecret) {
         this.tokenUrl = keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/token";
         this.clientId = clientId;
         this.clientSecret = clientSecret;

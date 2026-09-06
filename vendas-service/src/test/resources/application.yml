@@ -29,6 +29,12 @@ eureka:
   client:
     enabled: false
 
+service-token:
+  keycloak-url: http://localhost:9999
+  realm: test
+  client-id: vendas-service
+  client-secret: test-secret
+
 management:
   zipkin:
     tracing:
