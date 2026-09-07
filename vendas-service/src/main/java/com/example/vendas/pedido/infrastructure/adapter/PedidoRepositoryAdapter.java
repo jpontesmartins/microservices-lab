@@ -2,7 +2,6 @@ package com.example.vendas.pedido.infrastructure.adapter;
 
 import com.example.vendas.pedido.domain.model.ItemPedido;
 import com.example.vendas.pedido.domain.model.Pedido;
-import com.example.vendas.pedido.domain.model.StatusPedido;
 import com.example.vendas.pedido.domain.port.PedidoRepositoryPort;
 import com.example.vendas.pedido.entities.PedidoEntity;
 import com.example.vendas.pedido.entities.PedidoItemEntity;
@@ -66,10 +65,6 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
                 entity.getPedidoId(),
                 entity.getCepDestino());
 
-        if (entity.getStatus() != StatusPedido.CRIADO) {
-            pedido.marcarFalha(entity.getStatus(), entity.getMensagemErro());
-        }
-
         for (PedidoItemEntity itemEntity : entity.getItems()) {
             ItemPedido item = ItemPedido.criar(
                     itemEntity.getSku(),
@@ -86,9 +81,7 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
             pedido.adicionarItem(item);
         }
 
-        if (entity.getTransacaoId() != null) {
-            pedido.confirmarPagamento(entity.getTransacaoId());
-        }
+        pedido.restaurar(entity.getStatus(), entity.getMensagemErro(), entity.getTransacaoId());
 
         return pedido;
     }
