@@ -4,8 +4,11 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
+      group-id: notificacao-group
+      auto-offset-reset: earliest
       properties:
         schema.registry.url: ${SCHEMA_REGISTRY_URL:http://localhost:8087}
+        json.value.type: com.example.notificacao.core.dto.PedidoCriadoEvent
 
 server:
   port: 8086
