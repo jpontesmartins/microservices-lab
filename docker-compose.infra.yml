@@ -82,6 +82,14 @@ services:
     networks:
       - ms-net
 
+  zipkin:
+    image: openzipkin/zipkin:2
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - ms-net
+
   postgres-vendas:
     image: postgres:14
     container_name: postgres-vendas
