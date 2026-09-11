@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,7 +54,7 @@ class EstoqueControllerTest {
         @DisplayName("deve listar itens com sucesso no endpoint legado")
         void deveListarItensComSucessoNoEndpointLegado() {
             List<ItemEstoque> itens = List.of(
-                    new ItemEstoque("ABC-123", "Teclado Mecanico", 42));
+                    new ItemEstoque("ABC-123", "Teclado Mecanico", "https://example.com/teclado.jpg", new BigDecimal("250.00"), 42));
             when(estoqueService.listarItens()).thenReturn(itens);
 
             List<ItemEstoqueResponse> result = estoqueController.listarItens();
@@ -66,8 +67,8 @@ class EstoqueControllerTest {
         @DisplayName("deve listar itens com sucesso no endpoint /estoque/itens")
         void deveListarItensComSucessoNoEndpointComPrefixo() {
             List<ItemEstoque> itens = List.of(
-                    new ItemEstoque("ABC-123", "Teclado Mecanico", 42),
-                    new ItemEstoque("XYZ-789", "Mouse Gamer", 15));
+                    new ItemEstoque("ABC-123", "Teclado Mecanico", "https://example.com/teclado.jpg", new BigDecimal("250.00"), 42),
+                    new ItemEstoque("XYZ-789", "Mouse Gamer", "https://example.com/mouse.jpg", new BigDecimal("150.00"), 15));
             when(estoqueService.listarItens()).thenReturn(itens);
 
             List<ItemEstoqueResponse> result = estoqueController.listarItensComPrefixo();

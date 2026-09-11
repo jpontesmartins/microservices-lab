@@ -43,10 +43,10 @@ public class ItemEstoqueRepositoryAdapter implements ItemEstoqueRepositoryPort {
     }
 
     private ItemEstoque toDomain(ItemEstoqueEntity entity) {
-        return new ItemEstoque(entity.getSku(), entity.getDescricao(), entity.getQuantidade());
+        return new ItemEstoque(entity.getSku(), entity.getDescricao(), entity.getImagem(), entity.getValor(), entity.getQuantidade());
     }
 
     private ItemEstoqueEntity toEntity(ItemEstoque item) {
-        return new ItemEstoqueEntity(item.getSku(), item.getDescricao(), item.getQuantidade());
+        return new ItemEstoqueEntity(item.getSku(), item.getDescricao(), item.getImagem(), item.getValor(), item.getQuantidade());
     }
 }

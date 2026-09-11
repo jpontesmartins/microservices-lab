@@ -35,7 +35,7 @@ public class EstoqueController {
     public List<ItemEstoqueResponse> listarItens() {
         log.info("Listagem de itens recebida no endpoint legado /itens");
         List<ItemEstoqueResponse> itens = estoque.listarItens().stream()
-                .map(i -> new ItemEstoqueResponse(i.getSku(), i.getDescricao(), i.getQuantidade()))
+                .map(i -> new ItemEstoqueResponse(i.getSku(), i.getDescricao(), i.getImagem(), i.getValor(), i.getQuantidade()))
                 .toList();
         log.info("Itens retornados com sucesso (quantidade={})", itens.size());
         return itens;
@@ -45,7 +45,7 @@ public class EstoqueController {
     public List<ItemEstoqueResponse> listarItensComPrefixo() {
         log.info("Listagem de itens recebida no endpoint /estoque/itens");
         List<ItemEstoqueResponse> itens = estoque.listarItens().stream()
-                .map(i -> new ItemEstoqueResponse(i.getSku(), i.getDescricao(), i.getQuantidade()))
+                .map(i -> new ItemEstoqueResponse(i.getSku(), i.getDescricao(), i.getImagem(), i.getValor(), i.getQuantidade()))
                 .toList();
         log.info("Itens retornados com sucesso (quantidade={})", itens.size());
         return itens;
