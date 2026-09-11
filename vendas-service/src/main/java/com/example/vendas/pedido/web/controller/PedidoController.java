@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -61,6 +62,14 @@ public class PedidoController {
                     "error", "Bad Request",
                     "message", e.getMessage()));
         }
+    }
+
+    @GetMapping("/vendas/pedidos")
+    public ResponseEntity<List<PedidoResponse>> listar() {
+        log.info("Listagem de pedidos recebida");
+        List<PedidoResponse> resultado = pedidos.buscarTodos();
+        log.info("Retornando {} pedidos", resultado.size());
+        return ResponseEntity.ok(resultado);
     }
 
     @GetMapping("/vendas/pedidos/{pedidoId}")

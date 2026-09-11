@@ -54,6 +54,17 @@ public class Pedido {
         this.mensagemErro = mensagemErro;
     }
 
+    /**
+     * Restaura o estado do pedido a partir de dados persistidos.
+     * Diferente dos metodos de transicao (reservarEstoque, confirmarPagamento, etc.),
+     * este metodo nao gera efeitos colaterais — apenas seta o estado diretamente.
+     */
+    public void restaurar(StatusPedido status, String mensagemErro, String transacaoId) {
+        this.status = status;
+        this.mensagemErro = mensagemErro;
+        this.transacaoId = transacaoId;
+    }
+
     public double calcularValorTotal() {
         double subtotal = items.stream().mapToDouble(ItemPedido::getSubtotal).sum();
         double freteTotal = calcularValorFreteTotal();

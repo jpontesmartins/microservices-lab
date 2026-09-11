@@ -3,9 +3,16 @@ spring:
     name: notificacao-service
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
     consumer:
+      group-id: notificacao-group
+      auto-offset-reset: earliest
       properties:
         schema.registry.url: ${SCHEMA_REGISTRY_URL:http://localhost:8087}
+        json.value.type: com.example.notificacao.core.dto.PedidoCriadoEvent
 
 server:
   port: 8086

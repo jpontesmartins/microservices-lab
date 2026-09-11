@@ -2,6 +2,7 @@ package com.example.vendas.pedido.domain.port;
 
 import com.example.vendas.pedido.domain.model.Pedido;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -13,6 +14,8 @@ public interface PedidoRepositoryPort {
     void salvar(Pedido pedido);
 
     Optional<Pedido> buscarPorId(String pedidoId);
+
+    List<Pedido> buscarTodos();
 
     boolean existsById(String pedidoId);
 }
