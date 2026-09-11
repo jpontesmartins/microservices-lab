@@ -8,6 +8,7 @@ import com.example.vendas.pedido.entities.PedidoItemEntity;
 import com.example.vendas.pedido.infrastructure.repository.PedidoJpaRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -21,8 +22,31 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
 
     @Override
     public void salvar(Pedido pedido) {
-        PedidoEntity entity = toEntity(pedido);
-        jpaRepository.save(entity);
+        if (jpaRepository.existsById(pedido.getPedidoId())) {
+            PedidoEntity existing = jpaRepository.findById(pedido.getPedidoId()).orElseThrow();
+            existing.setStatus(pedido.getStatus());
+            existing.setTransacaoId(pedido.getTransacaoId());
+            existing.setMensagemErro(pedido.getMensagemErro());
+
+            for (ItemPedido di : pedido.getItems()) {
+                existing.getItems().stream()
+                        .filter(ei -> di.getSku().equals(ei.getSku()))
+                        .findFirst()
+                        .ifPresent(ei -> updateItemFields(ei, di));
+            }
+            jpaRepository.save(existing);
+        } else {
+            jpaRepository.save(toEntity(pedido));
+        }
+    }
+
+    private void updateItemFields(PedidoItemEntity ei, ItemPedido di) {
+        if (di.getReservaId() != null) ei.setReservaId(di.getReservaId());
+        if (di.getFreteId() != null) {
+            ei.setFreteId(di.getFreteId());
+            ei.setValorFrete(di.getValorFrete());
+            ei.setPrazoEntrega(di.getPrazoEntrega());
+        }
     }
 
     @Override
@@ -31,8 +55,27 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
     }
 
     @Override
+    public List<Pedido> buscarTodos() {
+        return jpaRepository.findAll().stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
     public boolean existsById(String pedidoId) {
         return jpaRepository.existsById(pedidoId);
+    }
+
+    private PedidoItemEntity toItemEntity(PedidoEntity entity, ItemPedido item) {
+        return new PedidoItemEntity(
+                entity,
+                item.getSku(),
+                item.getQuantidade(),
+                item.getValorUnitario(),
+                item.getReservaId(),
+                item.getFreteId(),
+                item.getValorFrete(),
+                item.getPrazoEntrega());
     }
 
     private PedidoEntity toEntity(Pedido pedido) {
@@ -45,16 +88,7 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
                 pedido.getMensagemErro());
 
         for (ItemPedido item : pedido.getItems()) {
-            PedidoItemEntity itemEntity = new PedidoItemEntity(
-                    entity,
-                    item.getSku(),
-                    item.getQuantidade(),
-                    item.getValorUnitario(),
-                    item.getReservaId(),
-                    item.getFreteId(),
-                    item.getValorFrete(),
-                    item.getPrazoEntrega());
-            entity.addItem(itemEntity);
+            entity.addItem(toItemEntity(entity, item));
         }
 
         return entity;

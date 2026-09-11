@@ -86,4 +86,16 @@ public class PedidoEntity {
     public List<PedidoItemEntity> getItems() {
         return items;
     }
+
+    public void setStatus(com.example.vendas.pedido.domain.model.StatusPedido status) {
+        this.status = status;
+    }
+
+    public void setTransacaoId(String transacaoId) {
+        this.transacaoId = transacaoId;
+    }
+
+    public void setMensagemErro(String mensagemErro) {
+        this.mensagemErro = mensagemErro;
+    }
 }

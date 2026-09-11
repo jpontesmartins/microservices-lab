@@ -97,4 +97,20 @@ public class PedidoItemEntity {
     public String getPrazoEntrega() {
         return prazoEntrega;
     }
+
+    public void setReservaId(String reservaId) {
+        this.reservaId = reservaId;
+    }
+
+    public void setFreteId(String freteId) {
+        this.freteId = freteId;
+    }
+
+    public void setValorFrete(double valorFrete) {
+        this.valorFrete = valorFrete;
+    }
+
+    public void setPrazoEntrega(String prazoEntrega) {
+        this.prazoEntrega = prazoEntrega;
+    }
 }

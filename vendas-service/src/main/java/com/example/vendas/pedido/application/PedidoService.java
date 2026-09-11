@@ -203,6 +203,14 @@ public class PedidoService {
                 .orElse(null);
     }
 
+    @Transactional(readOnly = true)
+    public List<PedidoResponse> buscarTodos() {
+        log.info("Listando todos os pedidos");
+        return pedidoRepository.buscarTodos().stream()
+                .map(PedidoService::toResponse)
+                .toList();
+    }
+
     private void compensarEstoque(Pedido pedido) {
         log.info("Registrando compensacao de estoque na tabela (pedidoId={})", pedido.getPedidoId());
         for (ItemPedido item : pedido.getItems()) {
