@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.estoque.config.TestSecurityConfig;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,8 +46,8 @@ class EstoqueRepositoryIntegrationTest {
     void setUp() {
         reservaJpaRepository.deleteAll();
         itemJpaRepository.deleteAll();
-        itemRepository.salvar(new ItemEstoque("ABC-123", "Teclado Mecanico", 42));
-        itemRepository.salvar(new ItemEstoque("XYZ-789", "Mouse Gamer", 15));
+        itemRepository.salvar(new ItemEstoque("ABC-123", "Teclado Mecanico", "https://example.com/teclado.jpg", new BigDecimal("250.00"), 42));
+        itemRepository.salvar(new ItemEstoque("XYZ-789", "Mouse Gamer", "https://example.com/mouse.jpg", new BigDecimal("150.00"), 15));
     }
 
     @Nested

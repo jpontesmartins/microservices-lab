@@ -1,4 +1,6 @@
 package com.example.estoque.web.dto;
 
-public record ItemEstoqueResponse(String sku, String descricao, int quantidade) {
+import java.math.BigDecimal;
+
+public record ItemEstoqueResponse(String sku, String descricao, String imagem, BigDecimal valor, int quantidade) {
 }

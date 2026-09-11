@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,8 +44,8 @@ class EstoqueServiceTest {
 
     @BeforeEach
     void setUp() {
-        teclado = new ItemEstoque("ABC-123", "Teclado Mecanico", 42);
-        mouse = new ItemEstoque("XYZ-789", "Mouse Gamer", 15);
+        teclado = new ItemEstoque("ABC-123", "Teclado Mecanico", "https://example.com/teclado.jpg", new BigDecimal("250.00"), 42);
+        mouse = new ItemEstoque("XYZ-789", "Mouse Gamer", "https://example.com/mouse.jpg", new BigDecimal("150.00"), 15);
     }
 
     @Nested

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.estoque.config.TestSecurityConfig;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -42,7 +43,7 @@ class EstoqueConcurrencyTest {
     @BeforeEach
     void setUp() {
         itemJpaRepository.deleteAll();
-        itemRepository.salvar(new ItemEstoque("ABC-123", "Teclado Mecanico", 5));
+        itemRepository.salvar(new ItemEstoque("ABC-123", "Teclado Mecanico", "https://example.com/teclado.jpg", new BigDecimal("250.00"), 5));
     }
 
     @Test
