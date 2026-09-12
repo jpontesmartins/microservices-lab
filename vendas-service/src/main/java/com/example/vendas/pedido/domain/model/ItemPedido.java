@@ -7,6 +7,7 @@ package com.example.vendas.pedido.domain.model;
 public class ItemPedido {
 
     private String sku;
+    private String descricao;
     private int quantidade;
     private double valorUnitario;
     private String reservaId;
@@ -17,9 +18,10 @@ public class ItemPedido {
     private ItemPedido() {
     }
 
-    public static ItemPedido criar(String sku, int quantidade, double valorUnitario) {
+    public static ItemPedido criar(String sku, String descricao, int quantidade, double valorUnitario) {
         ItemPedido item = new ItemPedido();
         item.sku = sku;
+        item.descricao = descricao;
         item.quantidade = quantidade;
         item.valorUnitario = valorUnitario;
         return item;
@@ -41,6 +43,10 @@ public class ItemPedido {
 
     public String getSku() {
         return sku;
+    }
+
+    public String getDescricao() {
+        return descricao;
     }
 
     public int getQuantidade() {

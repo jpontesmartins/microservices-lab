@@ -37,7 +37,7 @@ class PedidoRepositoryAdapterIntegrationTest {
     @DisplayName("deve salvar e restaurar pedido CRIADO com roundtrip no banco")
     void deveSalvarERestaurarPedidoCriado() {
         Pedido pedido = Pedido.criar("int-001", "01310-100");
-        pedido.adicionarItem(com.example.vendas.pedido.domain.model.ItemPedido.criar("SKU-A", 1, 99.9));
+        pedido.adicionarItem(com.example.vendas.pedido.domain.model.ItemPedido.criar("SKU-A", "Produto A", 1, 99.9));
 
         pedidoRepository.salvar(pedido);
 

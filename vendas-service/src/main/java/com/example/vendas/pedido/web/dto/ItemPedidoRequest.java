@@ -7,5 +7,5 @@ package com.example.vendas.pedido.web.dto;
  * @param quantidade quantidade do produto
  * @param valor      valor unitario do produto
  */
-public record ItemPedidoRequest(String sku, int quantidade, double valor) {
+public record ItemPedidoRequest(String sku, String descricao, int quantidade, double valor) {
 }

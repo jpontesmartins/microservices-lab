@@ -58,7 +58,7 @@ class OutboxRollbackTest {
     @BeforeEach
     void setUp() {
         requestValido = new CriarPedidoRequest(
-                List.of(new ItemPedidoRequest("SKU-ABC", 2, 120.50)),
+                List.of(new ItemPedidoRequest("SKU-ABC", "Mouse Gamer", 2, 120.50)),
                 "01310-100");
 
         ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-001", "RESERVADO");
@@ -76,7 +76,7 @@ class OutboxRollbackTest {
         doThrow(new RuntimeException("Simulando falha ao salvar no outbox"))
                 .when(eventoPublicacao).publicarPedidoCriado(any(Pedido.class));
 
-        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, "rollback-001"))
+        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, "rollback-001", null))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Simulando falha ao salvar no outbox");
 
@@ -90,7 +90,7 @@ class OutboxRollbackTest {
         doThrow(new RuntimeException("Simulando falha ao salvar no outbox"))
                 .when(eventoPublicacao).publicarPedidoCriado(any(Pedido.class));
 
-        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, "rollback-002"))
+        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, "rollback-002", null))
                 .isInstanceOf(RuntimeException.class);
 
         assertThat(outboxJpaRepository.count()).isZero();

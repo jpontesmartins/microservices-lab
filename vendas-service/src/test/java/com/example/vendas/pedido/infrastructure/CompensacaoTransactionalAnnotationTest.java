@@ -40,7 +40,7 @@ class CompensacaoTransactionalAnnotationTest {
     @DisplayName("criarPedido deve ter @Transactional")
     void criarPedidoDeveTerTransacional() throws NoSuchMethodException {
         var method = PedidoService.class.getMethod("criarPedido",
-                com.example.vendas.pedido.web.dto.CriarPedidoRequest.class, String.class);
+                com.example.vendas.pedido.web.dto.CriarPedidoRequest.class, String.class, Long.class);
 
         assertThat(method.isAnnotationPresent(Transactional.class))
                 .as("criarPedido deve ter @Transactional")

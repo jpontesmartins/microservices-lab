@@ -1,0 +1,11 @@
+# Forcar LF em arquivos shell/scripts (Docker/bash precisa de LF)
+*.sh text eol=lf
+
+# Forcar LF em configs de infra
+*.yml text eol=lf
+*.yaml text eol=lf
+*.properties text eol=lf
+*.xml text eol=lf
+*.sql text eol=lf
+Dockerfile* text eol=lf
+docker-compose*.yml text eol=lf

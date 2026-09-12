@@ -18,6 +18,7 @@ public class Pedido {
     private Instant criadoEm;
     private String transacaoId;
     private String mensagemErro;
+    private Long usuarioId;
     private final List<ItemPedido> items = new ArrayList<>();
 
     private Pedido() {
@@ -97,6 +98,14 @@ public class Pedido {
 
     public String getMensagemErro() {
         return mensagemErro;
+    }
+
+    public Long getUsuarioId() {
+        return usuarioId;
+    }
+
+    public void setUsuarioId(Long usuarioId) {
+        this.usuarioId = usuarioId;
     }
 
     public List<ItemPedido> getItems() {

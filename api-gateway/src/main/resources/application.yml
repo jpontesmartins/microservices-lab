@@ -12,6 +12,10 @@ spring:
           uri: lb://vendas-service
           predicates:
             - Path=/vendas/**
+        - id: vendas-usuario
+          uri: lb://vendas-service
+          predicates:
+            - Path=/usuario/**
         - id: estoque-service
           uri: lb://estoque-service
           predicates:

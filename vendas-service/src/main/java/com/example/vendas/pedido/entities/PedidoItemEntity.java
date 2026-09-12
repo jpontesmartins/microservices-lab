@@ -25,6 +25,9 @@ public class PedidoItemEntity {
     @Column(nullable = false)
     private String sku;
 
+    @Column
+    private String descricao;
+
     @Column(nullable = false)
     private int quantidade;
 
@@ -46,10 +49,11 @@ public class PedidoItemEntity {
     protected PedidoItemEntity() {
     }
 
-    public PedidoItemEntity(PedidoEntity pedido, String sku, int quantidade, double valorUnitario,
+    public PedidoItemEntity(PedidoEntity pedido, String sku, String descricao, int quantidade, double valorUnitario,
             String reservaId, String freteId, double valorFrete, String prazoEntrega) {
         this.pedido = pedido;
         this.sku = sku;
+        this.descricao = descricao;
         this.quantidade = quantidade;
         this.valorUnitario = valorUnitario;
         this.reservaId = reservaId;
@@ -72,6 +76,10 @@ public class PedidoItemEntity {
 
     public String getSku() {
         return sku;
+    }
+
+    public String getDescricao() {
+        return descricao;
     }
 
     public int getQuantidade() {

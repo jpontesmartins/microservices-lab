@@ -48,7 +48,7 @@ class OutboxSuccessTest {
     @BeforeEach
     void setUp() {
         requestValido = new CriarPedidoRequest(
-                List.of(new ItemPedidoRequest("SKU-ABC", 2, 120.50)),
+                List.of(new ItemPedidoRequest("SKU-ABC", "Mouse Gamer", 2, 120.50)),
                 "01310-100");
 
         ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-001", "RESERVADO");
@@ -63,7 +63,7 @@ class OutboxSuccessTest {
     @Test
     @DisplayName("pedido e outbox event salvos na mesma transacao com sucesso")
     void pedidoEOutboxSalvosNaMesmaTransacaoComSucesso() {
-        PedidoResponse response = pedidoService.criarPedido(requestValido, "sucesso-001");
+        PedidoResponse response = pedidoService.criarPedido(requestValido, "sucesso-001", null);
 
         assertThat(response).isNotNull();
         assertThat(response.status()).isEqualTo("PAGO");

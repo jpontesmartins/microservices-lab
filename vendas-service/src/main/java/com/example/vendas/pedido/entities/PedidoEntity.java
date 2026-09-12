@@ -5,7 +5,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
@@ -37,6 +40,10 @@ public class PedidoEntity {
     @Column(name = "mensagem_erro")
     private String mensagemErro;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id")
+    private com.example.vendas.usuario.entities.UsuarioEntity usuario;
+
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PedidoItemEntity> items = new ArrayList<>();
 
@@ -45,13 +52,14 @@ public class PedidoEntity {
 
     public PedidoEntity(String pedidoId, String cepDestino,
             com.example.vendas.pedido.domain.model.StatusPedido status, Instant criadoEm,
-            String transacaoId, String mensagemErro) {
+            String transacaoId, String mensagemErro, com.example.vendas.usuario.entities.UsuarioEntity usuario) {
         this.pedidoId = pedidoId;
         this.cepDestino = cepDestino;
         this.status = status;
         this.criadoEm = criadoEm;
         this.transacaoId = transacaoId;
         this.mensagemErro = mensagemErro;
+        this.usuario = usuario;
     }
 
     public void addItem(PedidoItemEntity item) {
@@ -97,5 +105,13 @@ public class PedidoEntity {
 
     public void setMensagemErro(String mensagemErro) {
         this.mensagemErro = mensagemErro;
+    }
+
+    public com.example.vendas.usuario.entities.UsuarioEntity getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(com.example.vendas.usuario.entities.UsuarioEntity usuario) {
+        this.usuario = usuario;
     }
 }

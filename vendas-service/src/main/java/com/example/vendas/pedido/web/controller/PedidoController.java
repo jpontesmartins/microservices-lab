@@ -8,12 +8,14 @@ import com.example.vendas.shared.exception.TransientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 import java.util.Map;
@@ -24,13 +26,16 @@ public class PedidoController {
     private static final Logger log = LoggerFactory.getLogger(PedidoController.class);
 
     private final PedidoService pedidos;
+    private final com.example.vendas.usuario.application.UsuarioService usuarioService;
 
-    public PedidoController(PedidoService pedidos) {
+    public PedidoController(PedidoService pedidos, com.example.vendas.usuario.application.UsuarioService usuarioService) {
         this.pedidos = pedidos;
+        this.usuarioService = usuarioService;
     }
 
     @PostMapping("/vendas/pedidos")
     public ResponseEntity<?> criar(
+            @AuthenticationPrincipal Jwt jwt,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @RequestBody CriarPedidoRequest request) {
         log.info("Recebida requisicao de criacao de pedido (totalItens={}, cepDestino={}, idempotencyKey={})",
@@ -38,7 +43,11 @@ public class PedidoController {
                 request != null ? request.cepDestino() : null,
                 idempotencyKey != null ? idempotencyKey.substring(0, Math.min(idempotencyKey.length(), 16)) + "..." : "none");
         try {
-            PedidoResponse response = pedidos.criarPedido(request, idempotencyKey);
+            String login = jwt.getClaimAsString("preferred_username");
+            Long usuarioId = usuarioService.buscarPorLogin(login)
+                    .map(com.example.vendas.usuario.domain.model.Usuario::getId)
+                    .orElse(null);
+            PedidoResponse response = pedidos.criarPedido(request, idempotencyKey, usuarioId);
             log.info("Pedido processado com sucesso (pedidoId={}, status={})", response.pedidoId(), response.status());
             return ResponseEntity.ok(response);
         } catch (BusinessException e) {

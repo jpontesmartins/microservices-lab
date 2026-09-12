@@ -4,6 +4,8 @@ import com.example.vendas.pedido.application.PedidoService;
 import com.example.vendas.pedido.web.dto.CriarPedidoRequest;
 import com.example.vendas.pedido.web.dto.ItemPedidoRequest;
 import com.example.vendas.pedido.web.dto.PedidoResponse;
+import com.example.vendas.usuario.application.UsuarioService;
+import com.example.vendas.usuario.domain.model.Usuario;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,11 +16,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -43,13 +45,16 @@ class PedidoSecurityIntegrationTest {
     private PedidoService pedidos;
 
     @MockBean
+    private UsuarioService usuarioService;
+
+    @MockBean
     private JwtDecoder jwtDecoder;
 
     private Jwt buildMockJwt() {
         return Jwt.withTokenValue("mock-token")
                 .header("alg", "RS256")
                 .claim("sub", "user-001")
-                .claim("user_id", "user-001")
+                .claim("preferred_username", "user1")
                 .claim("roles", List.of("USER"))
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(300))
@@ -65,15 +70,15 @@ class PedidoSecurityIntegrationTest {
 
     @Test
     @DisplayName("deve retornar 200 quando usuario autenticado consulta pedido existente")
-    @WithMockUser(roles = "USER")
     void deveRetornar200QuandoUsuarioAutenticadoConsultaPedido() throws Exception {
         when(jwtDecoder.decode(anyString())).thenReturn(buildMockJwt());
 
         PedidoResponse response = new PedidoResponse(
-                "pedido-001", "PAGO", List.of(), 250.0, 15.0, "tx-001", "2026-09-01T10:00:00", null);
+                "pedido-001", "PAGO", List.of(), 250.0, 15.0, "tx-001", "2026-09-01T10:00:00", null, 2L);
         when(pedidos.buscar("pedido-001")).thenReturn(response);
 
-        mockMvc.perform(get("/vendas/pedidos/pedido-001"))
+        mockMvc.perform(get("/vendas/pedidos/pedido-001")
+                        .header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.pedidoId").value("pedido-001"))
                 .andExpect(jsonPath("$.status").value("PAGO"));
@@ -81,24 +86,24 @@ class PedidoSecurityIntegrationTest {
 
     @Test
     @DisplayName("deve retornar 404 quando pedido nao existe")
-    @WithMockUser(roles = "USER")
     void deveRetornar404QuandoPedidoNaoExiste() throws Exception {
         when(jwtDecoder.decode(anyString())).thenReturn(buildMockJwt());
         when(pedidos.buscar("inexistente")).thenReturn(null);
 
-        mockMvc.perform(get("/vendas/pedidos/inexistente"))
+        mockMvc.perform(get("/vendas/pedidos/inexistente")
+                        .header("Authorization", "Bearer mock-token"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     @DisplayName("deve criar pedido com Idempotency-Key e retornar 200")
-    @WithMockUser(roles = "USER")
     void deveCriarPedidoComIdempotencyKeyERetornar200() throws Exception {
         when(jwtDecoder.decode(anyString())).thenReturn(buildMockJwt());
+        when(usuarioService.buscarPorLogin("user1")).thenReturn(Optional.of(new Usuario(2L, "user1", "User One", "user1@example.com")));
 
         PedidoResponse response = new PedidoResponse(
-                "minha-chave-idemp", "PAGO", List.of(), 261.0, 20.0, "tx-001", "2026-09-01T10:00:00", null);
-        when(pedidos.criarPedido(any(CriarPedidoRequest.class), eq("minha-chave-idemp")))
+                "minha-chave-idemp", "PAGO", List.of(), 261.0, 20.0, "tx-001", "2026-09-01T10:00:00", null, 2L);
+        when(pedidos.criarPedido(any(CriarPedidoRequest.class), eq("minha-chave-idemp"), eq(2L)))
                 .thenReturn(response);
 
         String requestJson = """
@@ -106,6 +111,7 @@ class PedidoSecurityIntegrationTest {
 
         mockMvc.perform(post("/vendas/pedidos")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer mock-token")
                         .header("Idempotency-Key", "minha-chave-idemp")
                         .content(requestJson))
                 .andExpect(status().isOk())
@@ -115,13 +121,13 @@ class PedidoSecurityIntegrationTest {
 
     @Test
     @DisplayName("deve criar pedido sem Idempotency-Key e retornar 200")
-    @WithMockUser(roles = "USER")
     void deveCriarPedidoSemIdempotencyKeyERetornar200() throws Exception {
         when(jwtDecoder.decode(anyString())).thenReturn(buildMockJwt());
+        when(usuarioService.buscarPorLogin("user1")).thenReturn(Optional.of(new Usuario(2L, "user1", "User One", "user1@example.com")));
 
         PedidoResponse response = new PedidoResponse(
-                "uuid-auto", "PAGO", List.of(), 261.0, 20.0, "tx-002", "2026-09-01T10:00:00", null);
-        when(pedidos.criarPedido(any(CriarPedidoRequest.class), isNull()))
+                "uuid-auto", "PAGO", List.of(), 261.0, 20.0, "tx-002", "2026-09-01T10:00:00", null, 2L);
+        when(pedidos.criarPedido(any(CriarPedidoRequest.class), isNull(), eq(2L)))
                 .thenReturn(response);
 
         String requestJson = """
@@ -129,6 +135,7 @@ class PedidoSecurityIntegrationTest {
 
         mockMvc.perform(post("/vendas/pedidos")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer mock-token")
                         .content(requestJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.pedidoId").value("uuid-auto"));
@@ -136,13 +143,13 @@ class PedidoSecurityIntegrationTest {
 
     @Test
     @DisplayName("deve retornar pedido existente quando Idempotency-Key ja utilizada")
-    @WithMockUser(roles = "USER")
     void deveRetornarPedidoExistenteQuandoIdempotencyKeyJaUtilizada() throws Exception {
         when(jwtDecoder.decode(any(String.class))).thenReturn(buildMockJwt());
+        when(usuarioService.buscarPorLogin("user1")).thenReturn(Optional.of(new Usuario(2L, "user1", "User One", "user1@example.com")));
 
         PedidoResponse response = new PedidoResponse(
-                "chave-duplicada", "FALHA_ESTOQUE", List.of(), 50.0, 0.0, null, "2026-09-01T10:00:00", "SKU desconhecido");
-        when(pedidos.criarPedido(any(CriarPedidoRequest.class), eq("chave-duplicada")))
+                "chave-duplicada", "FALHA_ESTOQUE", List.of(), 50.0, 0.0, null, "2026-09-01T10:00:00", "SKU desconhecido", 2L);
+        when(pedidos.criarPedido(any(CriarPedidoRequest.class), eq("chave-duplicada"), eq(2L)))
                 .thenReturn(response);
 
         String requestJson = """
@@ -150,6 +157,7 @@ class PedidoSecurityIntegrationTest {
 
         mockMvc.perform(post("/vendas/pedidos")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer mock-token")
                         .header("Idempotency-Key", "chave-duplicada")
                         .content(requestJson))
                 .andExpect(status().isOk())
@@ -159,10 +167,10 @@ class PedidoSecurityIntegrationTest {
 
     @Test
     @DisplayName("deve retornar 400 quando Idempotency-Key contem caracteres invalidos")
-    @WithMockUser(roles = "USER")
     void deveRetornar400QuandoIdempotencyKeyContemCaracteresInvalidos() throws Exception {
         when(jwtDecoder.decode(anyString())).thenReturn(buildMockJwt());
-        when(pedidos.criarPedido(any(CriarPedidoRequest.class), eq("key@invalida!#")))
+        when(usuarioService.buscarPorLogin("user1")).thenReturn(Optional.of(new Usuario(2L, "user1", "User One", "user1@example.com")));
+        when(pedidos.criarPedido(any(CriarPedidoRequest.class), eq("key@invalida!#"), eq(2L)))
                 .thenThrow(new IllegalArgumentException("Idempotency-Key deve conter apenas alfanumerico e hifens"));
 
         String requestJson = """
@@ -170,6 +178,7 @@ class PedidoSecurityIntegrationTest {
 
         mockMvc.perform(post("/vendas/pedidos")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Bearer mock-token")
                         .header("Idempotency-Key", "key@invalida!#")
                         .content(requestJson))
                 .andExpect(status().isBadRequest());

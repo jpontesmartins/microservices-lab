@@ -14,6 +14,7 @@ package com.example.vendas.pedido.web.dto;
  */
 public record ItemPedidoResponse(
         String sku,
+        String descricao,
         int quantidade,
         double valorUnitario,
         double subtotal,
