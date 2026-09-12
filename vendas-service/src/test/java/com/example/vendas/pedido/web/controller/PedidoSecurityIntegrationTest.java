@@ -74,7 +74,7 @@ class PedidoSecurityIntegrationTest {
         when(jwtDecoder.decode(anyString())).thenReturn(buildMockJwt());
 
         PedidoResponse response = new PedidoResponse(
-                "pedido-001", "PAGO", List.of(), 250.0, 15.0, "tx-001", "2026-09-01T10:00:00", null, 2L);
+                "pedido-001", "PAGO", List.of(), 250.0, 15.0, "tx-001", "2026-09-01T10:00:00", null, 2L, "01310-100");
         when(pedidos.buscar("pedido-001")).thenReturn(response);
 
         mockMvc.perform(get("/vendas/pedidos/pedido-001")
@@ -102,7 +102,7 @@ class PedidoSecurityIntegrationTest {
         when(usuarioService.buscarPorLogin("user1")).thenReturn(Optional.of(new Usuario(2L, "user1", "User One", "user1@example.com")));
 
         PedidoResponse response = new PedidoResponse(
-                "minha-chave-idemp", "PAGO", List.of(), 261.0, 20.0, "tx-001", "2026-09-01T10:00:00", null, 2L);
+                "minha-chave-idemp", "PAGO", List.of(), 261.0, 20.0, "tx-001", "2026-09-01T10:00:00", null, 2L, "01310-100");
         when(pedidos.criarPedido(any(CriarPedidoRequest.class), eq("minha-chave-idemp"), eq(2L)))
                 .thenReturn(response);
 
@@ -126,7 +126,7 @@ class PedidoSecurityIntegrationTest {
         when(usuarioService.buscarPorLogin("user1")).thenReturn(Optional.of(new Usuario(2L, "user1", "User One", "user1@example.com")));
 
         PedidoResponse response = new PedidoResponse(
-                "uuid-auto", "PAGO", List.of(), 261.0, 20.0, "tx-002", "2026-09-01T10:00:00", null, 2L);
+                "uuid-auto", "PAGO", List.of(), 261.0, 20.0, "tx-002", "2026-09-01T10:00:00", null, 2L, "01310-100");
         when(pedidos.criarPedido(any(CriarPedidoRequest.class), isNull(), eq(2L)))
                 .thenReturn(response);
 
@@ -148,7 +148,7 @@ class PedidoSecurityIntegrationTest {
         when(usuarioService.buscarPorLogin("user1")).thenReturn(Optional.of(new Usuario(2L, "user1", "User One", "user1@example.com")));
 
         PedidoResponse response = new PedidoResponse(
-                "chave-duplicada", "FALHA_ESTOQUE", List.of(), 50.0, 0.0, null, "2026-09-01T10:00:00", "SKU desconhecido", 2L);
+                "chave-duplicada", "FALHA_ESTOQUE", List.of(), 50.0, 0.0, null, "2026-09-01T10:00:00", "SKU desconhecido", 2L, "01310-100");
         when(pedidos.criarPedido(any(CriarPedidoRequest.class), eq("chave-duplicada"), eq(2L)))
                 .thenReturn(response);
 

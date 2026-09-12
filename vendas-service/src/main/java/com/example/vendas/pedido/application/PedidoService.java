@@ -268,7 +268,8 @@ public class PedidoService {
                 pedido.getTransacaoId(),
                 pedido.getCriadoEm().toString(),
                 pedido.getMensagemErro(),
-                pedido.getUsuarioId());
+                pedido.getUsuarioId(),
+                pedido.getCepDestino());
     }
 
     private static void validar(CriarPedidoRequest request) {

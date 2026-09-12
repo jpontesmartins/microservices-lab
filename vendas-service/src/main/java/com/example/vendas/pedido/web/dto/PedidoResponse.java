@@ -22,6 +22,7 @@ public record PedidoResponse(
         String transacaoId,
         String criadoEm,
         String mensagemErro,
-        Long usuarioId
+        Long usuarioId,
+        String cepDestino
 ) {
 }

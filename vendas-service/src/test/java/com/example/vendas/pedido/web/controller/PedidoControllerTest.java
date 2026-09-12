@@ -48,7 +48,7 @@ class PedidoControllerTest {
     @DisplayName("deve retornar 200 quando pedido e criado com sucesso")
     void deveRetornar200QuandoPedidoECriadoComSucesso() {
         PedidoResponse response = new PedidoResponse(
-                "pedido-001", "PAGO", List.of(), 261.0, 20.0, "transacao-001", "2026-09-01T10:00:00", null, 1L);
+                "pedido-001", "PAGO", List.of(), 261.0, 20.0, "transacao-001", "2026-09-01T10:00:00", null, 1L, "01310-100");
         when(pedidos.criarPedido(any(), any(), any())).thenReturn(response);
 
         ResponseEntity<?> result = controller.criar(Jwt.withTokenValue("tok").header("alg","RS256").claim("preferred_username","admin").issuedAt(java.time.Instant.now()).expiresAt(java.time.Instant.now().plusSeconds(300)).build(), null, requestValido());
@@ -134,7 +134,7 @@ class PedidoControllerTest {
     @DisplayName("deve passar Idempotency-Key para o service")
     void devePassarIdempotencyKeyParaOService() {
         PedidoResponse response = new PedidoResponse(
-                "minha-chave-123", "PAGO", List.of(), 261.0, 20.0, "transacao-001", "2026-09-01T10:00:00", null, 1L);
+                "minha-chave-123", "PAGO", List.of(), 261.0, 20.0, "transacao-001", "2026-09-01T10:00:00", null, 1L, "01310-100");
         when(pedidos.criarPedido(any(), eq("minha-chave-123"), any())).thenReturn(response);
 
         ResponseEntity<?> result = controller.criar(Jwt.withTokenValue("tok").header("alg","RS256").claim("preferred_username","admin").issuedAt(java.time.Instant.now()).expiresAt(java.time.Instant.now().plusSeconds(300)).build(), "minha-chave-123", requestValido());
@@ -148,7 +148,7 @@ class PedidoControllerTest {
     @DisplayName("deve passar null quando Idempotency-Key nao e fornecida")
     void devePassarNullQuandoIdempotencyKeyNaoEFornecida() {
         PedidoResponse response = new PedidoResponse(
-                "uuid-gerado", "PAGO", List.of(), 261.0, 20.0, "transacao-001", "2026-09-01T10:00:00", null, 1L);
+                "uuid-gerado", "PAGO", List.of(), 261.0, 20.0, "transacao-001", "2026-09-01T10:00:00", null, 1L, "01310-100");
         when(pedidos.criarPedido(any(), eq(null), any())).thenReturn(response);
 
         ResponseEntity<?> result = controller.criar(Jwt.withTokenValue("tok").header("alg","RS256").claim("preferred_username","admin").issuedAt(java.time.Instant.now()).expiresAt(java.time.Instant.now().plusSeconds(300)).build(), null, requestValido());
@@ -160,7 +160,7 @@ class PedidoControllerTest {
     @DisplayName("deve retornar 200 com pedido existente quando idempotency key ja utilizada")
     void deveRetornar200ComPedidoExistenteQuandoIdempotencyKeyJaUtilizada() {
         PedidoResponse response = new PedidoResponse(
-                "chave-duplicada", "FALHA_ESTOQUE", List.of(), 50.0, 0.0, null, "2026-09-01T10:00:00", "SKU desconhecido", 1L);
+                "chave-duplicada", "FALHA_ESTOQUE", List.of(), 50.0, 0.0, null, "2026-09-01T10:00:00", "SKU desconhecido", 1L, "01310-100");
         when(pedidos.criarPedido(any(), eq("chave-duplicada"), any())).thenReturn(response);
 
         ResponseEntity<?> result = controller.criar(Jwt.withTokenValue("tok").header("alg","RS256").claim("preferred_username","admin").issuedAt(java.time.Instant.now()).expiresAt(java.time.Instant.now().plusSeconds(300)).build(), "chave-duplicada", requestValido());

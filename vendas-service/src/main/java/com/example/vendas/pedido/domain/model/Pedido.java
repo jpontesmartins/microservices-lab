@@ -60,10 +60,11 @@ public class Pedido {
      * Diferente dos metodos de transicao (reservarEstoque, confirmarPagamento, etc.),
      * este metodo nao gera efeitos colaterais — apenas seta o estado diretamente.
      */
-    public void restaurar(StatusPedido status, String mensagemErro, String transacaoId) {
+    public void restaurar(StatusPedido status, String mensagemErro, String transacaoId, Instant criadoEm) {
         this.status = status;
         this.mensagemErro = mensagemErro;
         this.transacaoId = transacaoId;
+        this.criadoEm = criadoEm;
     }
 
     public double calcularValorTotal() {

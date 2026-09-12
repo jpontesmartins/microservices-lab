@@ -134,7 +134,7 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
             pedido.adicionarItem(item);
         }
 
-        pedido.restaurar(entity.getStatus(), entity.getMensagemErro(), entity.getTransacaoId());
+        pedido.restaurar(entity.getStatus(), entity.getMensagemErro(), entity.getTransacaoId(), entity.getCriadoEm());
 
         return pedido;
     }
