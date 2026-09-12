@@ -18,7 +18,7 @@ class OutboxTransactionalAnnotationTest {
     @DisplayName("criarPedido deve possuir anotacao @Transactional")
     void criarPedidoDevePossuirAnotacaoTransacional() throws NoSuchMethodException {
         var method = PedidoService.class.getMethod("criarPedido",
-                CriarPedidoRequest.class, String.class);
+                CriarPedidoRequest.class, String.class, Long.class);
 
         assertThat(method.isAnnotationPresent(Transactional.class))
                 .as("@Transactional deve estar presente em criarPedido()")

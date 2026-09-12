@@ -38,7 +38,7 @@ class EventoKafkaAdapterTest {
         adapter = new EventoKafkaAdapter(outboxRepository, objectMapper);
 
         pedido = Pedido.criar("pedido-001", "01310-100");
-        pedido.adicionarItem(ItemPedido.criar("SKU-ABC", 2, 100.0));
+        pedido.adicionarItem(ItemPedido.criar("SKU-ABC", "Mouse Gamer", 2, 100.0));
         pedido.confirmarPagamento("transacao-001");
     }
 

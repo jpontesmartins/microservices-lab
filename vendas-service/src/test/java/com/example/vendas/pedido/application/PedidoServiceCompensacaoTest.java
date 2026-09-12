@@ -57,7 +57,7 @@ class PedidoServiceCompensacaoTest {
     @BeforeEach
     void setUp() {
         requestValido = new CriarPedidoRequest(
-                List.of(new ItemPedidoRequest("SKU-ABC", 2, 120.50)),
+                List.of(new ItemPedidoRequest("SKU-ABC", "Mouse Gamer", 2, 120.50)),
                 "01310-100");
     }
 
@@ -70,7 +70,7 @@ class PedidoServiceCompensacaoTest {
         when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100")))
                 .thenThrow(new BusinessException("FALHA_FRETE", "CEP invalido", null));
 
-        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                 .isInstanceOf(BusinessException.class);
 
         verify(compensacaoRepository).salvarCompensacao(
@@ -90,7 +90,7 @@ class PedidoServiceCompensacaoTest {
         when(integracoes.processarPagamento(anyString(), anyDouble()))
                 .thenThrow(new BusinessException("FALHA_PAGAMENTO", "Saldo insuficiente", null));
 
-        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                 .isInstanceOf(BusinessException.class);
 
         verify(compensacaoRepository).salvarCompensacao(
@@ -110,7 +110,7 @@ class PedidoServiceCompensacaoTest {
         when(integracoes.processarPagamento(anyString(), anyDouble()))
                 .thenReturn(new PagamentoResult(null, "FALHA_TRANSITORIA", 261.0));
 
-        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                 .isInstanceOf(TransientException.class);
 
         verify(compensacaoRepository).salvarCompensacao(
@@ -125,7 +125,7 @@ class PedidoServiceCompensacaoTest {
         when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2)))
                 .thenThrow(new BusinessException("FALHA_ESTOQUE", "Sem estoque", null));
 
-        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+        assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                 .isInstanceOf(BusinessException.class);
 
         verify(compensacaoRepository, never()).salvarCompensacao(
@@ -143,7 +143,7 @@ class PedidoServiceCompensacaoTest {
         when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
         when(integracoes.processarPagamento(anyString(), anyDouble())).thenReturn(pagamento);
 
-        var response = pedidoService.criarPedido(requestValido, null);
+        var response = pedidoService.criarPedido(requestValido, null, null);
 
         assertThat(response.status()).isEqualTo("PAGO");
         verify(compensacaoRepository, never()).salvarCompensacao(
@@ -155,8 +155,8 @@ class PedidoServiceCompensacaoTest {
     void compensacaoComMultiplosItensDeveRegistrarParaCadaItem() {
         CriarPedidoRequest requestMultiplos = new CriarPedidoRequest(
                 List.of(
-                        new ItemPedidoRequest("SKU-ABC", 2, 120.50),
-                        new ItemPedidoRequest("SKU-DEF", 1, 50.0)),
+                        new ItemPedidoRequest("SKU-ABC", "Mouse Gamer", 2, 120.50),
+                        new ItemPedidoRequest("SKU-DEF", "Teclado Mecânico", 1, 50.0)),
                 "01310-100");
 
         ReservaEstoqueResult reserva1 = new ReservaEstoqueResult("reserva-001", "RESERVADO");
@@ -171,7 +171,7 @@ class PedidoServiceCompensacaoTest {
         when(integracoes.processarPagamento(anyString(), anyDouble()))
                 .thenReturn(new PagamentoResult(null, "FALHA_TRANSITORIA", 321.0));
 
-        assertThatThrownBy(() -> pedidoService.criarPedido(requestMultiplos, null))
+        assertThatThrownBy(() -> pedidoService.criarPedido(requestMultiplos, null, null))
                 .isInstanceOf(TransientException.class);
 
         verify(compensacaoRepository, times(2)).salvarCompensacao(

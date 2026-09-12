@@ -54,7 +54,7 @@ class CompensacaoIntegrationTest {
     @DisplayName("integracao: quando frete retorna FALHA_TRANSITORIA, compensacao de estoque e criada")
     void quandoFreteRetornaFALHA_TRANSITORIACompensacaoDeEstoqueEhCriada() {
         CriarPedidoRequest request = new CriarPedidoRequest(
-                List.of(new ItemPedidoRequest("SKU-ABC", 2, 120.50)),
+                List.of(new ItemPedidoRequest("SKU-ABC", "Mouse Gamer", 2, 120.50)),
                 "01310-100");
 
         ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-int-001", "RESERVADO");
@@ -63,7 +63,7 @@ class CompensacaoIntegrationTest {
         when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100")))
                 .thenReturn(new FreteResult(null, "FALHA_TRANSITORIA", 0.0, null));
 
-        assertThatThrownBy(() -> pedidoService.criarPedido(request, "int-comp-001"))
+        assertThatThrownBy(() -> pedidoService.criarPedido(request, "int-comp-001", null))
                 .isInstanceOf(TransientException.class);
 
         List<CompensacaoPendenteEntity> pendentes = compensacaoJpaRepository
@@ -81,7 +81,7 @@ class CompensacaoIntegrationTest {
     @DisplayName("integracao: quando pagamento retorna FALHA_TRANSITORIA, compensacoes de estoque e frete sao criadas")
     void quandoPagamentoRetornaFALHA_TRANSITORIACompensacoesSaoCriadas() {
         CriarPedidoRequest request = new CriarPedidoRequest(
-                List.of(new ItemPedidoRequest("SKU-ABC", 2, 120.50)),
+                List.of(new ItemPedidoRequest("SKU-ABC", "Mouse Gamer", 2, 120.50)),
                 "01310-100");
 
         ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-int-002", "RESERVADO");
@@ -92,7 +92,7 @@ class CompensacaoIntegrationTest {
         when(integracoes.processarPagamento(anyString(), anyDouble()))
                 .thenReturn(new PagamentoResult(null, "FALHA_TRANSITORIA", 261.0));
 
-        assertThatThrownBy(() -> pedidoService.criarPedido(request, "int-comp-002"))
+        assertThatThrownBy(() -> pedidoService.criarPedido(request, "int-comp-002", null))
                 .isInstanceOf(TransientException.class);
 
         List<CompensacaoPendenteEntity> pendentes = compensacaoJpaRepository
@@ -113,7 +113,7 @@ class CompensacaoIntegrationTest {
     @DisplayName("integracao: quando pedido e criado com sucesso, NENHUMA compensacao e criada")
     void quandoPedidoCriadoComSucessoNenhumaCompensacaoEhCriada() {
         CriarPedidoRequest request = new CriarPedidoRequest(
-                List.of(new ItemPedidoRequest("SKU-ABC", 2, 120.50)),
+                List.of(new ItemPedidoRequest("SKU-ABC", "Mouse Gamer", 2, 120.50)),
                 "01310-100");
 
         ReservaEstoqueResult reserva = new ReservaEstoqueResult("reserva-int-003", "RESERVADO");
@@ -124,7 +124,7 @@ class CompensacaoIntegrationTest {
         when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
         when(integracoes.processarPagamento(anyString(), anyDouble())).thenReturn(pagamento);
 
-        var response = pedidoService.criarPedido(request, "int-comp-003");
+        var response = pedidoService.criarPedido(request, "int-comp-003", null);
 
         assertThat(response.status()).isEqualTo("PAGO");
         assertThat(compensacaoJpaRepository.count()).isZero();

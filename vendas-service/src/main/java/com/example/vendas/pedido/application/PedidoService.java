@@ -62,7 +62,7 @@ public class PedidoService {
      * @return resposta do pedido com status e identificadores das integracoes
      */
     @Transactional
-    public PedidoResponse criarPedido(CriarPedidoRequest request, String idempotencyKey) {
+    public PedidoResponse criarPedido(CriarPedidoRequest request, String idempotencyKey, Long usuarioId) {
         validar(request);
         validarIdempotencyKey(idempotencyKey);
 
@@ -79,8 +79,11 @@ public class PedidoService {
                 pedidoId, request.cepDestino(), request.items().size());
 
         Pedido pedido = Pedido.criar(pedidoId, request.cepDestino());
+        if (usuarioId != null) {
+            pedido.setUsuarioId(usuarioId);
+        }
         for (ItemPedidoRequest itemReq : request.items()) {
-            pedido.adicionarItem(ItemPedido.criar(itemReq.sku(), itemReq.quantidade(), itemReq.valor()));
+            pedido.adicionarItem(ItemPedido.criar(itemReq.sku(), itemReq.descricao(), itemReq.quantidade(), itemReq.valor()));
         }
         try {
             pedidoRepository.salvar(pedido);
@@ -246,6 +249,7 @@ public class PedidoService {
         for (ItemPedido item : pedido.getItems()) {
             itemResponses.add(new ItemPedidoResponse(
                     item.getSku(),
+                    item.getDescricao(),
                     item.getQuantidade(),
                     item.getValorUnitario(),
                     item.getSubtotal(),
@@ -263,7 +267,8 @@ public class PedidoService {
                 pedido.calcularValorFreteTotal(),
                 pedido.getTransacaoId(),
                 pedido.getCriadoEm().toString(),
-                pedido.getMensagemErro());
+                pedido.getMensagemErro(),
+                pedido.getUsuarioId());
     }
 
     private static void validar(CriarPedidoRequest request) {

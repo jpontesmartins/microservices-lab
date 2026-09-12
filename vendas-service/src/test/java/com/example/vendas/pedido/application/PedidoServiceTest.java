@@ -70,7 +70,7 @@ class PedidoServiceTest {
     @BeforeEach
     void setUp() {
         requestValido = new CriarPedidoRequest(
-                List.of(new ItemPedidoRequest("SKU-ABC", 2, 120.50)),
+                List.of(new ItemPedidoRequest("SKU-ABC", "Mouse Gamer", 2, 120.50)),
                 "01310-100");
     }
 
@@ -89,7 +89,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(anyString(), anyDouble())).thenReturn(pagamento);
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido, null);
+            PedidoResponse response = pedidoService.criarPedido(requestValido, null, null);
 
             assertThat(response).isNotNull();
             assertThat(response.status()).isEqualTo("PAGO");
@@ -114,8 +114,8 @@ class PedidoServiceTest {
         void deveCriarPedidoComMultiplosItensComSucesso() {
             CriarPedidoRequest requestMultiplos = new CriarPedidoRequest(
                     List.of(
-                            new ItemPedidoRequest("SKU-ABC", 2, 120.50),
-                            new ItemPedidoRequest("SKU-DEF", 1, 50.0)),
+                            new ItemPedidoRequest("SKU-ABC", "Mouse Gamer", 2, 120.50),
+                            new ItemPedidoRequest("SKU-DEF", "Teclado Mecânico", 1, 50.0)),
                     "01310-100");
 
             ReservaEstoqueResult reserva1 = new ReservaEstoqueResult("reserva-001", "RESERVADO");
@@ -130,7 +130,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-DEF"), eq(1), eq("01310-100"))).thenReturn(frete2);
             when(integracoes.processarPagamento(anyString(), anyDouble())).thenReturn(pagamento);
 
-            PedidoResponse response = pedidoService.criarPedido(requestMultiplos, null);
+            PedidoResponse response = pedidoService.criarPedido(requestMultiplos, null, null);
 
             assertThat(response).isNotNull();
             assertThat(response.status()).isEqualTo("PAGO");
@@ -150,7 +150,7 @@ class PedidoServiceTest {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2)))
                     .thenThrow(new BusinessException("FALHA_ESTOQUE", "Sem estoque para SKU ABC", null));
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex -> assertThat(((BusinessException) ex).getStatus()).isEqualTo("FALHA_ESTOQUE"));
 
@@ -165,7 +165,7 @@ class PedidoServiceTest {
         void deveLancarTransientExceptionQuandoEstoqueRetornaNull() {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(null);
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                     .isInstanceOf(TransientException.class);
 
             verify(pedidoRepository, times(2)).salvar(any());
@@ -178,7 +178,7 @@ class PedidoServiceTest {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2)))
                     .thenReturn(new ReservaEstoqueResult(null, "FALHA_TRANSITORIA"));
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                     .isInstanceOf(TransientException.class);
 
             verify(pedidoRepository, times(2)).salvar(any());
@@ -194,7 +194,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100")))
                     .thenThrow(new BusinessException("FALHA_FRETE", "CEP de destino invalido", null));
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex -> assertThat(((BusinessException) ex).getStatus()).isEqualTo("FALHA_FRETE"));
 
@@ -212,7 +212,7 @@ class PedidoServiceTest {
             when(integracoes.reservarEstoque(anyString(), eq("SKU-ABC"), eq(2))).thenReturn(reserva);
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(null);
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                     .isInstanceOf(TransientException.class);
 
             verify(compensacaoRepository).salvarCompensacao(
@@ -229,7 +229,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100")))
                     .thenReturn(new FreteResult(null, "FALHA_TRANSITORIA", 0.0, null));
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                     .isInstanceOf(TransientException.class);
 
             verify(compensacaoRepository).salvarCompensacao(
@@ -247,7 +247,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(anyString(), eq(261.0))).thenReturn(null);
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                     .isInstanceOf(TransientException.class);
 
             verify(compensacaoRepository).salvarCompensacao(
@@ -268,7 +268,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(anyString(), eq(261.0))).thenReturn(pagamentoFalhaTransitoria);
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                     .isInstanceOf(TransientException.class);
 
             verify(compensacaoRepository).salvarCompensacao(
@@ -289,7 +289,7 @@ class PedidoServiceTest {
             when(integracoes.processarPagamento(anyString(), eq(261.0)))
                     .thenThrow(new BusinessException("FALHA_PAGAMENTO", "Cartao recusado", null));
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, null, null))
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex -> assertThat(((BusinessException) ex).getStatus()).isEqualTo("FALHA_PAGAMENTO"));
 
@@ -308,7 +308,7 @@ class PedidoServiceTest {
         @Test
         @DisplayName("deve lancar excecao quando request e null")
         void deveLancarExcecaoQuandoRequestENull() {
-            assertThatThrownBy(() -> pedidoService.criarPedido(null, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(null, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Body obrigatorio");
         }
@@ -318,7 +318,7 @@ class PedidoServiceTest {
         void deveLancarExcecaoQuandoItemsEVazio() {
             CriarPedidoRequest request = new CriarPedidoRequest(List.of(), "01310-100");
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(request, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("items obrigatorio e nao pode ser vazio");
         }
@@ -328,7 +328,7 @@ class PedidoServiceTest {
         void deveLancarExcecaoQuandoItemsENull() {
             CriarPedidoRequest request = new CriarPedidoRequest(null, "01310-100");
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(request, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("items obrigatorio e nao pode ser vazio");
         }
@@ -337,9 +337,9 @@ class PedidoServiceTest {
         @DisplayName("deve lancar excecao quando sku do item e vazio")
         void deveLancarExcecaoQuandoSkuDoItemEVazio() {
             CriarPedidoRequest request = new CriarPedidoRequest(
-                    List.of(new ItemPedidoRequest("", 1, 100.0)), "01310-100");
+                    List.of(new ItemPedidoRequest("", "Produto", 1, 100.0)), "01310-100");
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(request, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("item[0].sku obrigatorio");
         }
@@ -348,9 +348,9 @@ class PedidoServiceTest {
         @DisplayName("deve lancar excecao quando quantidade do item e menor ou igual a zero")
         void deveLancarExcecaoQuandoQuantidadeDoItemEMenorOuIgualAZero() {
             CriarPedidoRequest request = new CriarPedidoRequest(
-                    List.of(new ItemPedidoRequest("SKU", 0, 100.0)), "01310-100");
+                    List.of(new ItemPedidoRequest("SKU", "Produto", 0, 100.0)), "01310-100");
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(request, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("item[0].quantidade deve ser > 0");
         }
@@ -359,9 +359,9 @@ class PedidoServiceTest {
         @DisplayName("deve lancar excecao quando valor do item e menor ou igual a zero")
         void deveLancarExcecaoQuandoValorDoItemEMenorOuIgualAZero() {
             CriarPedidoRequest request = new CriarPedidoRequest(
-                    List.of(new ItemPedidoRequest("SKU", 1, 0.0)), "01310-100");
+                    List.of(new ItemPedidoRequest("SKU", "Produto", 1, 0.0)), "01310-100");
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(request, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("item[0].valor deve ser > 0");
         }
@@ -370,9 +370,9 @@ class PedidoServiceTest {
         @DisplayName("deve lancar excecao quando cepDestino e vazio")
         void deveLancarExcecaoQuandoCepDestinoEVazio() {
             CriarPedidoRequest request = new CriarPedidoRequest(
-                    List.of(new ItemPedidoRequest("SKU", 1, 100.0)), "");
+                    List.of(new ItemPedidoRequest("SKU", "Produto", 1, 100.0)), "");
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(request, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("cepDestino obrigatorio");
         }
@@ -381,9 +381,9 @@ class PedidoServiceTest {
         @DisplayName("deve lancar excecao quando cepDestino e null")
         void deveLancarExcecaoQuandoCepDestinoENull() {
             CriarPedidoRequest request = new CriarPedidoRequest(
-                    List.of(new ItemPedidoRequest("SKU", 1, 100.0)), null);
+                    List.of(new ItemPedidoRequest("SKU", "Produto", 1, 100.0)), null);
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(request, null))
+            assertThatThrownBy(() -> pedidoService.criarPedido(request, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("cepDestino obrigatorio");
         }
@@ -418,7 +418,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(eq("minha-chave-123"), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(eq("minha-chave-123"), anyDouble())).thenReturn(pagamento);
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido, "minha-chave-123");
+            PedidoResponse response = pedidoService.criarPedido(requestValido, "minha-chave-123", null);
 
             assertThat(response).isNotNull();
             assertThat(response.pedidoId()).isEqualTo("minha-chave-123");
@@ -431,13 +431,13 @@ class PedidoServiceTest {
         void deveRetornarPedidoExistenteQuandoIdempotencyKeyJaUtilizada() {
             Pedido pedidoExistente = Pedido.criar("chave-duplicada", "01310-100");
             pedidoExistente.adicionarItem(
-                    com.example.vendas.pedido.domain.model.ItemPedido.criar("SKU-ABC", 2, 120.50));
+                    com.example.vendas.pedido.domain.model.ItemPedido.criar("SKU-ABC", "Mouse Gamer", 2, 120.50));
             pedidoExistente.marcarFalha(StatusPedido.FALHA_ESTOQUE, "SKU desconhecido");
 
             when(pedidoRepository.existsById("chave-duplicada")).thenReturn(true);
             when(pedidoRepository.buscarPorId("chave-duplicada")).thenReturn(Optional.of(pedidoExistente));
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido, "chave-duplicada");
+            PedidoResponse response = pedidoService.criarPedido(requestValido, "chave-duplicada", null);
 
             assertThat(response).isNotNull();
             assertThat(response.pedidoId()).isEqualTo("chave-duplicada");
@@ -453,7 +453,7 @@ class PedidoServiceTest {
         void deveRetornarPedidoExistenteQuandoDataIntegrityViolationEmSalvar() {
             Pedido pedidoExistente = Pedido.criar("chave-concorrencia", "01310-100");
             pedidoExistente.adicionarItem(
-                    com.example.vendas.pedido.domain.model.ItemPedido.criar("SKU-ABC", 2, 120.50));
+                    com.example.vendas.pedido.domain.model.ItemPedido.criar("SKU-ABC", "Mouse Gamer", 2, 120.50));
             pedidoExistente.marcarFalha(StatusPedido.FALHA_TRANSITORIA, "Servico indisponivel");
 
             when(pedidoRepository.existsById("chave-concorrencia")).thenReturn(false);
@@ -462,7 +462,7 @@ class PedidoServiceTest {
                     .when(pedidoRepository).salvar(any());
             when(pedidoRepository.buscarPorId("chave-concorrencia")).thenReturn(Optional.of(pedidoExistente));
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido, "chave-concorrencia");
+            PedidoResponse response = pedidoService.criarPedido(requestValido, "chave-concorrencia", null);
 
             assertThat(response).isNotNull();
             assertThat(response.pedidoId()).isEqualTo("chave-concorrencia");
@@ -481,7 +481,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(anyString(), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(anyString(), anyDouble())).thenReturn(pagamento);
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido, null);
+            PedidoResponse response = pedidoService.criarPedido(requestValido, null, null);
 
             assertThat(response).isNotNull();
             assertThat(response.pedidoId()).isNotBlank();
@@ -491,7 +491,7 @@ class PedidoServiceTest {
         @Test
         @DisplayName("deve lancar excecao quando Idempotency-Key e vazio")
         void deveLancarExcecaoQuandoIdempotencyKeyEVazio() {
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, "  "))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, "  ", null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Idempotency-Key nao pode ser vazio");
         }
@@ -501,7 +501,7 @@ class PedidoServiceTest {
         void deveLancarExcecaoQuandoIdempotencyKeyExcede128Caracteres() {
             String keyLonga = "a".repeat(129);
 
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, keyLonga))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, keyLonga, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("maximo 128 caracteres");
         }
@@ -509,7 +509,7 @@ class PedidoServiceTest {
         @Test
         @DisplayName("deve lancar excecao quando Idempotency-Key contem caracteres invalidos")
         void deveLancarExcecaoQuandoIdempotencyKeyContemCaracteresInvalidos() {
-            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, "key@invalida!#"))
+            assertThatThrownBy(() -> pedidoService.criarPedido(requestValido, "key@invalida!#", null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("apenas alfanumerico e hifens");
         }
@@ -526,7 +526,7 @@ class PedidoServiceTest {
             when(integracoes.calcularFrete(eq("key-abc-123-XYZ"), eq("SKU-ABC"), eq(2), eq("01310-100"))).thenReturn(frete);
             when(integracoes.processarPagamento(eq("key-abc-123-XYZ"), anyDouble())).thenReturn(pagamento);
 
-            PedidoResponse response = pedidoService.criarPedido(requestValido, "key-abc-123-XYZ");
+            PedidoResponse response = pedidoService.criarPedido(requestValido, "key-abc-123-XYZ", null);
 
             assertThat(response).isNotNull();
             assertThat(response.pedidoId()).isEqualTo("key-abc-123-XYZ");

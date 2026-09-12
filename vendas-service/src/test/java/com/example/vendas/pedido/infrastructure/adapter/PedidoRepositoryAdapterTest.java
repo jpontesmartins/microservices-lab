@@ -134,7 +134,7 @@ class PedidoRepositoryAdapterTest {
     void deveRestaurarItensComReserva() {
         PedidoEntity entity = buildEntity("pedido-009", StatusPedido.ESTOQUE_RESERVADO, null, null);
         PedidoItemEntity itemEntity = new PedidoItemEntity(
-                entity, "SKU-001", 2, 50.0,
+                entity, "SKU-001", "Mouse Gamer", 2, 50.0,
                 "reserva-001", null, 0.0, null);
         entity.addItem(itemEntity);
         when(jpaRepository.findById("pedido-009")).thenReturn(Optional.of(entity));
@@ -152,7 +152,7 @@ class PedidoRepositoryAdapterTest {
     void deveRestaurarItensComFrete() {
         PedidoEntity entity = buildEntity("pedido-010", StatusPedido.FRETE_CALCULADO, null, null);
         PedidoItemEntity itemEntity = new PedidoItemEntity(
-                entity, "SKU-002", 1, 100.0,
+                entity, "SKU-002", "Teclado Mecânico", 1, 100.0,
                 "reserva-002", "frete-002", 25.50, "3 dias");
         entity.addItem(itemEntity);
         when(jpaRepository.findById("pedido-010")).thenReturn(Optional.of(entity));
@@ -199,7 +199,7 @@ class PedidoRepositoryAdapterTest {
     private PedidoEntity buildEntity(String pedidoId, StatusPedido status, String transacaoId, String mensagemErro) {
         PedidoEntity entity = new PedidoEntity(
                 pedidoId, "01310-100", status, Instant.now(),
-                transacaoId, mensagemErro);
+                transacaoId, mensagemErro, null);
         return entity;
     }
 }

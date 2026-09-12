@@ -6,6 +6,8 @@ import com.example.vendas.pedido.domain.port.PedidoRepositoryPort;
 import com.example.vendas.pedido.entities.PedidoEntity;
 import com.example.vendas.pedido.entities.PedidoItemEntity;
 import com.example.vendas.pedido.infrastructure.repository.PedidoJpaRepository;
+import com.example.vendas.usuario.domain.port.UsuarioRepositoryPort;
+import com.example.vendas.usuario.entities.UsuarioEntity;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,9 +17,11 @@ import java.util.Optional;
 public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
 
     private final PedidoJpaRepository jpaRepository;
+    private final UsuarioRepositoryPort usuarioRepository;
 
-    public PedidoRepositoryAdapter(PedidoJpaRepository jpaRepository) {
+    public PedidoRepositoryAdapter(PedidoJpaRepository jpaRepository, UsuarioRepositoryPort usuarioRepository) {
         this.jpaRepository = jpaRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @Override
@@ -70,6 +74,7 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
         return new PedidoItemEntity(
                 entity,
                 item.getSku(),
+                item.getDescricao(),
                 item.getQuantidade(),
                 item.getValorUnitario(),
                 item.getReservaId(),
@@ -79,13 +84,22 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
     }
 
     private PedidoEntity toEntity(Pedido pedido) {
+        com.example.vendas.usuario.entities.UsuarioEntity usuarioEntity = null;
+        if (pedido.getUsuarioId() != null) {
+            usuarioEntity = usuarioRepository.buscarPorId(pedido.getUsuarioId())
+                    .map(u -> new com.example.vendas.usuario.entities.UsuarioEntity(
+                            u.getId(), u.getLogin(), u.getNome(), u.getEmail()))
+                    .orElse(null);
+        }
+
         PedidoEntity entity = new PedidoEntity(
                 pedido.getPedidoId(),
                 pedido.getCepDestino(),
                 pedido.getStatus(),
                 pedido.getCriadoEm(),
                 pedido.getTransacaoId(),
-                pedido.getMensagemErro());
+                pedido.getMensagemErro(),
+                usuarioEntity);
 
         for (ItemPedido item : pedido.getItems()) {
             entity.addItem(toItemEntity(entity, item));
@@ -99,9 +113,14 @@ public class PedidoRepositoryAdapter implements PedidoRepositoryPort {
                 entity.getPedidoId(),
                 entity.getCepDestino());
 
+        if (entity.getUsuario() != null) {
+            pedido.setUsuarioId(entity.getUsuario().getId());
+        }
+
         for (PedidoItemEntity itemEntity : entity.getItems()) {
             ItemPedido item = ItemPedido.criar(
                     itemEntity.getSku(),
+                    itemEntity.getDescricao(),
                     itemEntity.getQuantidade(),
                     itemEntity.getValorUnitario());
 
